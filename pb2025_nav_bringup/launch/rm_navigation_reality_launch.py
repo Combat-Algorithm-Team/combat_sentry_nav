@@ -45,6 +45,7 @@ def generate_launch_description():
     rviz_config_file = LaunchConfiguration("rviz_config_file")
     use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     use_rviz = LaunchConfiguration("use_rviz")
+    robot_name = LaunchConfiguration("robot_name")
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -61,8 +62,8 @@ def generate_launch_description():
 
     declare_world_cmd = DeclareLaunchArgument(
         "world",
-        default_value="rmul_2024",
-        description="Select world: 'rmul_2024' or 'rmuc_2024' (map file share the same name as the this parameter)",
+        default_value="rmuc_2025",
+        description="Select world: 'rmuc_2025' or 'rmul_2025' (map file share the same name as the this parameter)",
     )
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
@@ -123,6 +124,12 @@ def generate_launch_description():
         description="Whether to start the robot state publisher",
     )
 
+    declare_robot_name_cmd = DeclareLaunchArgument(
+        "robot_name",
+        default_value="combat2025_sentry",
+        description="The file name of the robot xmacro to be used",
+    )
+
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         "rviz_config_file",
         default_value=os.path.join(bringup_dir, "rviz", "nav2_default_view.rviz"),
@@ -154,6 +161,7 @@ def generate_launch_description():
         launch_arguments={
             "namespace": namespace,
             "use_sim_time": use_sim_time,
+            "robot_name" : robot_name,
         }.items(),
     )
 
@@ -216,12 +224,14 @@ def generate_launch_description():
     ld.add_action(declare_use_robot_state_pub_cmd)
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_use_respawn_cmd)
+    ld.add_action(declare_robot_name_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(start_livox_ros_driver2_node)
     ld.add_action(bringup_cmd)
-    ld.add_action(joy_teleop_cmd)
+    # ld.add_action(joy_teleop_cmd)
     ld.add_action(rviz_cmd)
+    
 
     return ld

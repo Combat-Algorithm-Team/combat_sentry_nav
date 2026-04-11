@@ -19,7 +19,6 @@
 #include <mutex>
 #include <string>
 
-#include "example_interfaces/msg/float32.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
@@ -43,13 +42,12 @@ private:
   void odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg);
   void localPlanCallback(const nav_msgs::msg::Path::ConstSharedPtr & msg);
   void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
-  void cmdSpinCallback(example_interfaces::msg::Float32::SharedPtr msg);
+
   void publishTransform();
   geometry_msgs::msg::Twist transformVelocity(
     const geometry_msgs::msg::Twist::SharedPtr & twist, float yaw_diff);
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
-  rclcpp::Subscription<example_interfaces::msg::Float32>::SharedPtr cmd_spin_sub_;
 
   message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_filter_;
   message_filters::Subscriber<nav_msgs::msg::Path> local_plan_sub_filter_;
@@ -67,10 +65,8 @@ private:
   std::string fake_robot_base_frame_;
   std::string odom_topic_;
   std::string local_plan_topic_;
-  std::string cmd_spin_topic_;
   std::string input_cmd_vel_topic_;
   std::string output_cmd_vel_topic_;
-  float spin_speed_;
 
   std::mutex cmd_vel_mutex_;
   geometry_msgs::msg::Twist::SharedPtr latest_cmd_vel_;
