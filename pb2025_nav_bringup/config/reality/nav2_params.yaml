@@ -154,8 +154,8 @@ fake_vel_transform:
   ros__parameters:
     use_sim_time: False
     odom_topic: "odometry"
-    robot_base_frame: "gimbal_yaw"
-    fake_robot_base_frame: "gimbal_yaw_fake"
+    robot_base_frame: "base_yaw"
+    fake_robot_base_frame: "base_yaw_fake"
     input_cmd_vel_topic: "cmd_vel_nav2_result"
     output_cmd_vel_topic: "navigation_cmd"
     cmd_chassis_status_topic: "cmd_chassis_status"

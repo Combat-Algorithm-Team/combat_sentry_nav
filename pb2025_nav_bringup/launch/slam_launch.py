@@ -146,6 +146,9 @@ def generate_launch_description():
         output="screen",
         respawn=use_respawn,
         respawn_delay=2.0,
+        additional_env={
+            "LD_PRELOAD": "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0",
+        },
         parameters=[
             configured_params,
             {"prior_pcd.enable": False},
