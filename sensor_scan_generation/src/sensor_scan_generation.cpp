@@ -14,7 +14,9 @@
 
 #include "sensor_scan_generation/sensor_scan_generation.hpp"
 
+#include "tf2/utils.hpp"
 #include "pcl_ros/transforms.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace sensor_scan_generation
@@ -26,10 +28,12 @@ SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & o
   this->declare_parameter<std::string>("lidar_frame", "");
   this->declare_parameter<std::string>("base_frame", "");
   this->declare_parameter<std::string>("robot_base_frame", "");
+  this->declare_parameter<std::string>("robot_base_odom_frame", "");
 
   this->get_parameter("lidar_frame", lidar_frame_);
   this->get_parameter("base_frame", base_frame_);
   this->get_parameter("robot_base_frame", robot_base_frame_);
+  this->get_parameter("robot_base_odom_frame", robot_base_odom_frame_);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -37,6 +41,7 @@ SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & o
 
   pub_laser_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("sensor_scan", 2);
   pub_chassis_odometry_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry", 2);
+  pub_base_yaw_joint_ = this->create_publisher<sensor_msgs::msg::JointState>("base_yaw_joint", 2);
 
   rmw_qos_profile_t qos_profile = {
     RMW_QOS_POLICY_HISTORY_KEEP_LAST,
@@ -64,20 +69,32 @@ void SensorScanGenerationNode::laserCloudAndOdometryHandler(
   const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg,
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pcd_msg)
 {
+  if (initialized_) {
+    tf_lidar_to_robot_base_ = getTransform(robot_base_frame_, lidar_frame_, odometry_msg->header.stamp);
+    tf_robot_base_odom_to_chassis_ = getTransform(base_frame_, robot_base_odom_frame_, odometry_msg->header.stamp);
+    initialized_ = true;
+  }
+
   tf2::Transform tf_lidar_to_chassis;
   tf2::Transform tf_odom_to_chassis;
   tf2::Transform tf_odom_to_robot_base;
   tf2::Transform tf_odom_to_lidar;
+  tf2::Transform tf_odom_to_robot_base_odom;
+  tf2::Transform tf_robot_base_odom_to_robot_base;
 
   tf2::fromMsg(odometry_msg->pose.pose, tf_odom_to_lidar);
-  tf_lidar_to_robot_base_ = getTransform(lidar_frame_, robot_base_frame_, pcd_msg->header.stamp);
-  tf_lidar_to_chassis = getTransform(lidar_frame_, base_frame_, pcd_msg->header.stamp);
-
-  tf_odom_to_chassis = tf_odom_to_lidar * tf_lidar_to_chassis;
   tf_odom_to_robot_base = tf_odom_to_lidar * tf_lidar_to_robot_base_;
+  
+  double robot_base_yaw = tf2::getYaw(tf_odom_to_robot_base.getRotation());
+  publishRobotBaseJoint(robot_base_yaw, robot_base_odom_frame_, base_frame_, pcd_msg->header.stamp);
 
+  tf_robot_base_odom_to_robot_base = tf2::Transform(tf2::Quaternion(tf2::Vector3(0, 0, 1), robot_base_yaw), tf2::Vector3(0, 0, 0));
+  tf_odom_to_robot_base_odom = tf_odom_to_robot_base * tf_robot_base_odom_to_robot_base.inverse();
+  tf_odom_to_chassis = tf_odom_to_robot_base_odom * tf_robot_base_odom_to_chassis_;
+  
   publishTransform(
     tf_odom_to_chassis, odometry_msg->header.frame_id, base_frame_, pcd_msg->header.stamp);
+
   publishOdometry(
     tf_odom_to_robot_base, odometry_msg->header.frame_id, robot_base_frame_, pcd_msg->header.stamp);
 
@@ -155,6 +172,17 @@ void SensorScanGenerationNode::publishOdometry(
   previous_time = current_time;
 
   pub_chassis_odometry_->publish(out);
+}
+
+void SensorScanGenerationNode::publishRobotBaseJoint(
+  const double robot_base_yaw, std::string parent_frame, const std::string & child_frame,
+  const rclcpp::Time & stamp)
+{
+  sensor_msgs::msg::JointState joint_state;
+  joint_state.header.stamp = stamp;
+  joint_state.name.push_back("base_yaw_joint");
+  joint_state.position.push_back(robot_base_yaw);
+  pub_base_yaw_joint_->publish(joint_state);
 }
 
 }  // namespace sensor_scan_generation

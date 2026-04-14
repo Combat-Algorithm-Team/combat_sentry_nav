@@ -24,6 +24,7 @@
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
@@ -51,14 +52,20 @@ private:
   void publishOdometry(
     const tf2::Transform & transform, std::string parent_frame, const std::string & child_frame,
     const rclcpp::Time & stamp);
+    
+  void publishRobotBaseJoint(
+    const double robot_base_yaw, std::string parent_frame, const std::string & child_frame,
+    const rclcpp::Time & stamp);
 
   std::string lidar_frame_;
   std::string base_frame_;
   std::string robot_base_frame_;
+  std::string robot_base_odom_frame_;
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> br_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_laser_cloud_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_chassis_odometry_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr pub_base_yaw_joint_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -71,6 +78,9 @@ private:
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
   tf2::Transform tf_lidar_to_robot_base_;
+  tf2::Transform tf_robot_base_odom_to_chassis_;
+
+  bool initialized_ = false;
 };
 
 }  // namespace sensor_scan_generation
