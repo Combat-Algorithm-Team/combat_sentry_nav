@@ -20,6 +20,7 @@
 #include <string>
 
 #include "geometry_msgs/msg/twist.hpp"
+#include "geometry_msgs/msg/twist_stamped.hpp"
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
 #include "message_filters/synchronizer.h"
@@ -27,6 +28,8 @@
 #include "nav_msgs/msg/path.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "tf2_ros/transform_broadcaster.h"
+#include "tf2_ros/buffer.h"
+#include "tf2_ros/transform_listener.h"
 
 namespace fake_vel_transform
 {
@@ -46,6 +49,7 @@ private:
   void publishTransform();
   geometry_msgs::msg::Twist transformVelocity(
     const geometry_msgs::msg::Twist::SharedPtr & twist, float yaw_diff);
+  void publishActualVel(const nav_msgs::msg::Odometry::ConstSharedPtr & odom_msg);
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
 
@@ -56,8 +60,11 @@ private:
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_chassis_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::TwistStamped>::SharedPtr actual_vel_pub_;
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  std::shared_ptr<tf2_ros::Buffer> tf_buffer_;
+  std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
 
   rclcpp::TimerBase::SharedPtr timer_;
 
@@ -67,11 +74,20 @@ private:
   std::string local_plan_topic_;
   std::string input_cmd_vel_topic_;
   std::string output_cmd_vel_topic_;
+  std::string actual_vel_topic_;
 
   std::mutex cmd_vel_mutex_;
   geometry_msgs::msg::Twist::SharedPtr latest_cmd_vel_;
   double current_robot_base_angle_;
   rclcpp::Time last_controller_activate_time_;
+
+  rclcpp::Time last_odom_time_;
+  double last_odom_x_{0.0};
+  double last_odom_y_{0.0};
+  double last_odom_yaw_{0.0};
+  bool has_last_odom_{false}; // 标记是否已经收到了第一帧
+  bool has_last_time_{false};
+
 };
 
 }  // namespace fake_vel_transform
