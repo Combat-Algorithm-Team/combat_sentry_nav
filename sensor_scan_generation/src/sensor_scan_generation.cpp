@@ -14,13 +14,22 @@
 
 #include "sensor_scan_generation/sensor_scan_generation.hpp"
 
+#include <cmath>
+
 #include "tf2/utils.hpp"
-#include "pcl_ros/transforms.hpp"
+#include "tf2/LinearMath/Quaternion.h"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 
 namespace sensor_scan_generation
 {
+namespace
+{
+double normalizeAngle(const double angle)
+{
+  return std::atan2(std::sin(angle), std::cos(angle));
+}
+}  // namespace
 
 SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & options)
 : Node("sensor_scan_generation", options)
@@ -29,53 +38,54 @@ SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & o
   this->declare_parameter<std::string>("base_frame", "");
   this->declare_parameter<std::string>("robot_base_frame", "");
   this->declare_parameter<std::string>("robot_base_odom_frame", "");
+  this->declare_parameter<double>("tf_lookup_timeout_sec", 0.05);
 
   this->get_parameter("lidar_frame", lidar_frame_);
   this->get_parameter("base_frame", base_frame_);
   this->get_parameter("robot_base_frame", robot_base_frame_);
   this->get_parameter("robot_base_odom_frame", robot_base_odom_frame_);
+  this->get_parameter("tf_lookup_timeout_sec", tf_lookup_timeout_sec_);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
   br_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
-  pub_laser_cloud_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("sensor_scan", 2);
   pub_chassis_odometry_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry", 2);
   pub_base_yaw_joint_ = this->create_publisher<sensor_msgs::msg::JointState>("base_yaw_joint", 2);
 
-  rmw_qos_profile_t qos_profile = {
-    RMW_QOS_POLICY_HISTORY_KEEP_LAST,
-    1,
-    RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
-    RMW_QOS_POLICY_DURABILITY_VOLATILE,
-    RMW_QOS_DEADLINE_DEFAULT,
-    RMW_QOS_LIFESPAN_DEFAULT,
-    RMW_QOS_POLICY_LIVELINESS_SYSTEM_DEFAULT,
-    RMW_QOS_LIVELINESS_LEASE_DURATION_DEFAULT,
-    false};
-
-  odometry_sub_.subscribe(this, "lidar_odometry", qos_profile);
-  laser_cloud_sub_.subscribe(this, "registered_scan", qos_profile);
-
-  sync_ = std::make_unique<message_filters::Synchronizer<SyncPolicy>>(
-    SyncPolicy(100), odometry_sub_, laser_cloud_sub_);
-  sync_->registerCallback(
-    std::bind(
-      &SensorScanGenerationNode::laserCloudAndOdometryHandler, this, std::placeholders::_1,
-      std::placeholders::_2));
+  auto odom_qos = rclcpp::QoS(rclcpp::KeepLast(1));
+  odom_qos.best_effort();
+  odom_qos.durability_volatile();
+  odometry_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    "lidar_odometry", odom_qos,
+    std::bind(&SensorScanGenerationNode::odometryHandler, this, std::placeholders::_1));
 }
 
-void SensorScanGenerationNode::laserCloudAndOdometryHandler(
-  const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg,
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr & pcd_msg)
+void SensorScanGenerationNode::odometryHandler(
+  const nav_msgs::msg::Odometry::ConstSharedPtr & odometry_msg)
 {
-  if (initialized_) {
-    tf_lidar_to_robot_base_ = getTransform(robot_base_frame_, lidar_frame_, odometry_msg->header.stamp);
-    tf_robot_base_odom_to_chassis_ = getTransform(base_frame_, robot_base_odom_frame_, odometry_msg->header.stamp);
+  const rclcpp::Time reference_stamp = odometry_msg->header.stamp;
+
+  if (!initialized_) {
+    tf2::Transform tf_lidar_to_robot_base;
+    tf2::Transform tf_robot_base_odom_to_chassis;
+    const bool has_lidar_to_robot_base =
+      getTransform(robot_base_frame_, lidar_frame_, reference_stamp, tf_lidar_to_robot_base);
+    const bool has_robot_base_odom_to_chassis = getTransform(
+      base_frame_, robot_base_odom_frame_, reference_stamp, tf_robot_base_odom_to_chassis);
+    if (!has_lidar_to_robot_base || !has_robot_base_odom_to_chassis) {
+      RCLCPP_WARN_THROTTLE(
+        this->get_logger(), *this->get_clock(), 1000,
+        "Drop frame while waiting required TFs at %.6f: %s<- %s, %s <- %s.",
+        reference_stamp.seconds(), robot_base_frame_.c_str(), lidar_frame_.c_str(),
+        base_frame_.c_str(), robot_base_odom_frame_.c_str());
+      return;
+    }
+    tf_lidar_to_robot_base_ = tf_lidar_to_robot_base;
+    tf_robot_base_odom_to_chassis_ = tf_robot_base_odom_to_chassis;
     initialized_ = true;
   }
 
-  tf2::Transform tf_lidar_to_chassis;
   tf2::Transform tf_odom_to_chassis;
   tf2::Transform tf_odom_to_robot_base;
   tf2::Transform tf_odom_to_lidar;
@@ -85,36 +95,35 @@ void SensorScanGenerationNode::laserCloudAndOdometryHandler(
   tf2::fromMsg(odometry_msg->pose.pose, tf_odom_to_lidar);
   tf_odom_to_robot_base = tf_odom_to_lidar * tf_lidar_to_robot_base_;
   
-  double robot_base_yaw = tf2::getYaw(tf_odom_to_robot_base.getRotation());
-  publishRobotBaseJoint(robot_base_yaw, robot_base_odom_frame_, base_frame_, pcd_msg->header.stamp);
+  const double robot_base_yaw = tf2::getYaw(tf_odom_to_robot_base.getRotation());
+  publishRobotBaseJoint(robot_base_yaw, reference_stamp);
 
-  tf_robot_base_odom_to_robot_base = tf2::Transform(tf2::Quaternion(tf2::Vector3(0, 0, 1), robot_base_yaw), tf2::Vector3(0, 0, 0));
+  tf_robot_base_odom_to_robot_base = tf2::Transform(
+    tf2::Quaternion(tf2::Vector3(0, 0, 1), robot_base_yaw), tf2::Vector3(0, 0, 0));
   tf_odom_to_robot_base_odom = tf_odom_to_robot_base * tf_robot_base_odom_to_robot_base.inverse();
   tf_odom_to_chassis = tf_odom_to_robot_base_odom * tf_robot_base_odom_to_chassis_;
   
-  publishTransform(
-    tf_odom_to_chassis, odometry_msg->header.frame_id, base_frame_, pcd_msg->header.stamp);
+  publishTransform(tf_odom_to_chassis, odometry_msg->header.frame_id, base_frame_, reference_stamp);
 
   publishOdometry(
-    tf_odom_to_robot_base, odometry_msg->header.frame_id, robot_base_frame_, pcd_msg->header.stamp);
-
-  sensor_msgs::msg::PointCloud2 out;
-  pcl_ros::transformPointCloud(lidar_frame_, tf_odom_to_lidar.inverse(), *pcd_msg, out);
-  pub_laser_cloud_->publish(out);
+    tf_odom_to_robot_base, odometry_msg->header.frame_id, robot_base_frame_, reference_stamp);
 }
 
-tf2::Transform SensorScanGenerationNode::getTransform(
-  const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & time)
+bool SensorScanGenerationNode::getTransform(
+  const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & time,
+  tf2::Transform & transform)
 {
   try {
     auto transform_stamped = tf_buffer_->lookupTransform(
-      target_frame, source_frame, time, rclcpp::Duration::from_seconds(0.5));
-    tf2::Transform transform;
+      target_frame, source_frame, time, rclcpp::Duration::from_seconds(tf_lookup_timeout_sec_));
     tf2::fromMsg(transform_stamped.transform, transform);
-    return transform;
+    return true;
   } catch (tf2::TransformException & ex) {
-    RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s. Returning identity.", ex.what());
-    return tf2::Transform::getIdentity();
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "TF lookup failed for %s <- %s at %.6f: %s", target_frame.c_str(), source_frame.c_str(),
+      time.seconds(), ex.what());
+    return false;
   }
 }
 
@@ -131,7 +140,7 @@ void SensorScanGenerationNode::publishTransform(
 }
 
 void SensorScanGenerationNode::publishOdometry(
-  const tf2::Transform & transform, std::string parent_frame, const std::string & child_frame,
+  const tf2::Transform & transform, const std::string & parent_frame, const std::string & child_frame,
   const rclcpp::Time & stamp)
 {
   nav_msgs::msg::Odometry out;
@@ -145,38 +154,36 @@ void SensorScanGenerationNode::publishOdometry(
   out.pose.pose.position.z = origin.z();
   out.pose.pose.orientation = tf2::toMsg(transform.getRotation());
 
-  static tf2::Transform previous_transform;
-  static auto previous_time = std::chrono::steady_clock::now();
-  const auto current_time = std::chrono::steady_clock::now();
+  if (has_previous_odom_sample_) {
+    const double dt = (stamp - previous_odom_stamp_).seconds();
+    if (dt > 1e-6) {
+      const tf2::Vector3 linear_velocity_parent =
+        (transform.getOrigin() - previous_odom_transform_.getOrigin()) / dt;
+      const tf2::Vector3 linear_velocity_child =
+        tf2::quatRotate(transform.getRotation().inverse(), linear_velocity_parent);
 
-  const double dt =
-    std::chrono::duration_cast<std::chrono::nanoseconds>(current_time - previous_time).count() *
-    1e-9;
+      const double previous_yaw = tf2::getYaw(previous_odom_transform_.getRotation());
+      const double current_yaw = tf2::getYaw(transform.getRotation());
+      const double yaw_rate = normalizeAngle(current_yaw - previous_yaw) / dt;
 
-  if (dt > 0) {
-    const auto linear_velocity = (transform.getOrigin() - previous_transform.getOrigin()) / dt;
-
-    const tf2::Quaternion q_diff =
-      transform.getRotation() * previous_transform.getRotation().inverse();
-    const auto angular_velocity = q_diff.getAxis() * q_diff.getAngle() / dt;
-
-    out.twist.twist.linear.x = linear_velocity.x();
-    out.twist.twist.linear.y = linear_velocity.y();
-    out.twist.twist.linear.z = linear_velocity.z();
-    out.twist.twist.angular.x = angular_velocity.x();
-    out.twist.twist.angular.y = angular_velocity.y();
-    out.twist.twist.angular.z = angular_velocity.z();
+      out.twist.twist.linear.x = linear_velocity_child.x();
+      out.twist.twist.linear.y = linear_velocity_child.y();
+      out.twist.twist.linear.z = linear_velocity_child.z();
+      out.twist.twist.angular.x = 0.0;
+      out.twist.twist.angular.y = 0.0;
+      out.twist.twist.angular.z = yaw_rate;
+    }
   }
 
-  previous_transform = transform;
-  previous_time = current_time;
+  previous_odom_transform_ = transform;
+  previous_odom_stamp_ = stamp;
+  has_previous_odom_sample_ = true;
 
   pub_chassis_odometry_->publish(out);
 }
 
 void SensorScanGenerationNode::publishRobotBaseJoint(
-  const double robot_base_yaw, std::string parent_frame, const std::string & child_frame,
-  const rclcpp::Time & stamp)
+  const double robot_base_yaw, const rclcpp::Time & stamp)
 {
   sensor_msgs::msg::JointState joint_state;
   joint_state.header.stamp = stamp;

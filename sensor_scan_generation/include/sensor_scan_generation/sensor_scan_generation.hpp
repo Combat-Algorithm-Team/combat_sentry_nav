@@ -18,13 +18,10 @@
 #include <memory>
 #include <string>
 
-#include "message_filters/subscriber.h"
-#include "message_filters/sync_policies/approximate_time.h"
-#include "message_filters/synchronizer.h"
 #include "nav_msgs/msg/odometry.hpp"
 #include "rclcpp/rclcpp.hpp"
-#include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "tf2/LinearMath/Transform.h"
 #include "tf2_ros/buffer.h"
 #include "tf2_ros/transform_broadcaster.h"
 #include "tf2_ros/transform_listener.h"
@@ -38,47 +35,42 @@ public:
   explicit SensorScanGenerationNode(const rclcpp::NodeOptions & options);
 
 private:
-  void laserCloudAndOdometryHandler(
-    const nav_msgs::msg::Odometry::ConstSharedPtr & odometry,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr & laserCloud2);
+  void odometryHandler(const nav_msgs::msg::Odometry::ConstSharedPtr & odometry);
 
-  tf2::Transform getTransform(
-    const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & time);
+  bool getTransform(
+    const std::string & target_frame, const std::string & source_frame, const rclcpp::Time & time,
+    tf2::Transform & transform);
 
   void publishTransform(
     const tf2::Transform & transform, const std::string & parent_frame,
     const std::string & child_frame, const rclcpp::Time & stamp);
 
   void publishOdometry(
-    const tf2::Transform & transform, std::string parent_frame, const std::string & child_frame,
-    const rclcpp::Time & stamp);
-    
-  void publishRobotBaseJoint(
-    const double robot_base_yaw, std::string parent_frame, const std::string & child_frame,
-    const rclcpp::Time & stamp);
+    const tf2::Transform & transform, const std::string & parent_frame,
+    const std::string & child_frame, const rclcpp::Time & stamp);
+
+  void publishRobotBaseJoint(const double robot_base_yaw, const rclcpp::Time & stamp);
 
   std::string lidar_frame_;
   std::string base_frame_;
   std::string robot_base_frame_;
   std::string robot_base_odom_frame_;
+  double tf_lookup_timeout_sec_ = 0.05;
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> br_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_laser_cloud_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_chassis_odometry_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr pub_base_yaw_joint_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
-  message_filters::Subscriber<nav_msgs::msg::Odometry> odometry_sub_;
-  message_filters::Subscriber<sensor_msgs::msg::PointCloud2> laser_cloud_sub_;
-
-  using SyncPolicy = message_filters::sync_policies::ApproximateTime<
-    nav_msgs::msg::Odometry, sensor_msgs::msg::PointCloud2>;
-  std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odometry_sub_;
 
   tf2::Transform tf_lidar_to_robot_base_;
   tf2::Transform tf_robot_base_odom_to_chassis_;
+  tf2::Transform previous_odom_transform_ = tf2::Transform::getIdentity();
+  rclcpp::Time previous_odom_stamp_;
+  bool has_previous_odom_sample_ = false;
 
   bool initialized_ = false;
 };
