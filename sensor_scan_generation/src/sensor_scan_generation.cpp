@@ -70,9 +70,9 @@ void SensorScanGenerationNode::odometryHandler(
     tf2::Transform tf_lidar_to_robot_base;
     tf2::Transform tf_robot_base_odom_to_chassis;
     const bool has_lidar_to_robot_base =
-      getTransform(robot_base_frame_, lidar_frame_, reference_stamp, tf_lidar_to_robot_base);
+      getTransform(lidar_frame_, robot_base_frame_, reference_stamp, tf_lidar_to_robot_base);
     const bool has_robot_base_odom_to_chassis = getTransform(
-      base_frame_, robot_base_odom_frame_, reference_stamp, tf_robot_base_odom_to_chassis);
+      robot_base_odom_frame_, base_frame_, reference_stamp, tf_robot_base_odom_to_chassis);
     if (!has_lidar_to_robot_base || !has_robot_base_odom_to_chassis) {
       RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 1000,
