@@ -14,8 +14,6 @@
 
 #include "sensor_scan_generation/sensor_scan_generation.hpp"
 
-#include <cmath>
-
 #include "tf2/utils.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "sensor_msgs/msg/joint_state.hpp"
@@ -23,13 +21,6 @@
 
 namespace sensor_scan_generation
 {
-namespace
-{
-double normalizeAngle(const double angle)
-{
-  return std::atan2(std::sin(angle), std::cos(angle));
-}
-}  // namespace
 
 SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & options)
 : Node("sensor_scan_generation", options)
@@ -106,7 +97,8 @@ void SensorScanGenerationNode::odometryHandler(
   publishTransform(tf_odom_to_chassis, odometry_msg->header.frame_id, base_frame_, reference_stamp);
 
   publishOdometry(
-    tf_odom_to_robot_base, odometry_msg->header.frame_id, robot_base_frame_, reference_stamp);
+    tf_odom_to_robot_base, odometry_msg, odometry_msg->header.frame_id, robot_base_frame_,
+    reference_stamp);
 }
 
 bool SensorScanGenerationNode::getTransform(
@@ -140,8 +132,8 @@ void SensorScanGenerationNode::publishTransform(
 }
 
 void SensorScanGenerationNode::publishOdometry(
-  const tf2::Transform & transform, const std::string & parent_frame, const std::string & child_frame,
-  const rclcpp::Time & stamp)
+  const tf2::Transform & transform, const nav_msgs::msg::Odometry::ConstSharedPtr & input_odometry,
+  const std::string & parent_frame, const std::string & child_frame, const rclcpp::Time & stamp)
 {
   nav_msgs::msg::Odometry out;
   out.header.stamp = stamp;
@@ -154,30 +146,28 @@ void SensorScanGenerationNode::publishOdometry(
   out.pose.pose.position.z = origin.z();
   out.pose.pose.orientation = tf2::toMsg(transform.getRotation());
 
-  if (has_previous_odom_sample_) {
-    const double dt = (stamp - previous_odom_stamp_).seconds();
-    if (dt > 1e-6) {
-      const tf2::Vector3 linear_velocity_parent =
-        (transform.getOrigin() - previous_odom_transform_.getOrigin()) / dt;
-      const tf2::Vector3 linear_velocity_child =
-        tf2::quatRotate(transform.getRotation().inverse(), linear_velocity_parent);
+  const tf2::Vector3 linear_velocity_lidar(
+    input_odometry->twist.twist.linear.x,
+    input_odometry->twist.twist.linear.y,
+    input_odometry->twist.twist.linear.z);
+  const tf2::Vector3 angular_velocity_lidar(
+    input_odometry->twist.twist.angular.x,
+    input_odometry->twist.twist.angular.y,
+    input_odometry->twist.twist.angular.z);
+  const tf2::Vector3 linear_velocity_robot_base_origin_lidar =
+    linear_velocity_lidar + angular_velocity_lidar.cross(tf_lidar_to_robot_base_.getOrigin());
+  const auto rotation_lidar_to_robot_base = tf_lidar_to_robot_base_.getRotation();
+  const tf2::Vector3 linear_velocity_robot_base = tf2::quatRotate(
+    rotation_lidar_to_robot_base.inverse(), linear_velocity_robot_base_origin_lidar);
+  const tf2::Vector3 angular_velocity_robot_base = tf2::quatRotate(
+    rotation_lidar_to_robot_base.inverse(), angular_velocity_lidar);
 
-      const double previous_yaw = tf2::getYaw(previous_odom_transform_.getRotation());
-      const double current_yaw = tf2::getYaw(transform.getRotation());
-      const double yaw_rate = normalizeAngle(current_yaw - previous_yaw) / dt;
-
-      out.twist.twist.linear.x = linear_velocity_child.x();
-      out.twist.twist.linear.y = linear_velocity_child.y();
-      out.twist.twist.linear.z = linear_velocity_child.z();
-      out.twist.twist.angular.x = 0.0;
-      out.twist.twist.angular.y = 0.0;
-      out.twist.twist.angular.z = yaw_rate;
-    }
-  }
-
-  previous_odom_transform_ = transform;
-  previous_odom_stamp_ = stamp;
-  has_previous_odom_sample_ = true;
+  out.twist.twist.linear.x = linear_velocity_robot_base.x();
+  out.twist.twist.linear.y = linear_velocity_robot_base.y();
+  out.twist.twist.linear.z = linear_velocity_robot_base.z();
+  out.twist.twist.angular.x = angular_velocity_robot_base.x();
+  out.twist.twist.angular.y = angular_velocity_robot_base.y();
+  out.twist.twist.angular.z = angular_velocity_robot_base.z();
 
   pub_chassis_odometry_->publish(out);
 }

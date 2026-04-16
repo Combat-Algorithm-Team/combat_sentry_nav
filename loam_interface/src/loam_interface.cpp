@@ -94,6 +94,30 @@ void LoamInterfaceNode::odometryCallback(const nav_msgs::msg::Odometry::ConstSha
   out.pose.pose.position.z = origin.z();
   out.pose.pose.orientation = tf2::toMsg(tf_odom_to_lidar.getRotation());
 
+  // Odometry twist should be expressed in the output child frame (`lidar_frame_`).
+  const tf2::Vector3 linear_velocity_base(
+    msg->twist.twist.linear.x,
+    msg->twist.twist.linear.y,
+    msg->twist.twist.linear.z);
+  const tf2::Vector3 angular_velocity_base(
+    msg->twist.twist.angular.x,
+    msg->twist.twist.angular.y,
+    msg->twist.twist.angular.z);
+  const tf2::Vector3 linear_velocity_lidar_origin_base =
+    linear_velocity_base + angular_velocity_base.cross(tf_odom_to_lidar_odom_.getOrigin());
+  const auto rotation_base_to_lidar = tf_odom_to_lidar_odom_.getRotation();
+  const tf2::Vector3 linear_velocity_lidar = tf2::quatRotate(
+    rotation_base_to_lidar.inverse(), linear_velocity_lidar_origin_base);
+  const tf2::Vector3 angular_velocity_lidar = tf2::quatRotate(
+    rotation_base_to_lidar.inverse(), angular_velocity_base);
+
+  out.twist.twist.linear.x = linear_velocity_lidar.x();
+  out.twist.twist.linear.y = linear_velocity_lidar.y();
+  out.twist.twist.linear.z = linear_velocity_lidar.z();
+  out.twist.twist.angular.x = angular_velocity_lidar.x();
+  out.twist.twist.angular.y = angular_velocity_lidar.y();
+  out.twist.twist.angular.z = angular_velocity_lidar.z();
+
   odom_pub_->publish(out);
 }
 

@@ -46,8 +46,8 @@ private:
     const std::string & child_frame, const rclcpp::Time & stamp);
 
   void publishOdometry(
-    const tf2::Transform & transform, const std::string & parent_frame,
-    const std::string & child_frame, const rclcpp::Time & stamp);
+    const tf2::Transform & transform, const nav_msgs::msg::Odometry::ConstSharedPtr & input_odometry,
+    const std::string & parent_frame, const std::string & child_frame, const rclcpp::Time & stamp);
 
   void publishRobotBaseJoint(const double robot_base_yaw, const rclcpp::Time & stamp);
 
@@ -68,9 +68,6 @@ private:
 
   tf2::Transform tf_lidar_to_robot_base_;
   tf2::Transform tf_robot_base_odom_to_chassis_;
-  tf2::Transform previous_odom_transform_ = tf2::Transform::getIdentity();
-  rclcpp::Time previous_odom_stamp_;
-  bool has_previous_odom_sample_ = false;
 
   bool initialized_ = false;
 };
