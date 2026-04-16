@@ -51,7 +51,7 @@ SensorScanGenerationNode::SensorScanGenerationNode(const rclcpp::NodeOptions & o
   br_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   pub_chassis_odometry_ = this->create_publisher<nav_msgs::msg::Odometry>("odometry", 2);
-  pub_base_yaw_joint_ = this->create_publisher<sensor_msgs::msg::JointState>("base_yaw_joint", 2);
+  pub_base_yaw_joint_ = this->create_publisher<sensor_msgs::msg::JointState>("base_yaw_joint_publisher", 2);
 
   auto odom_qos = rclcpp::QoS(rclcpp::KeepLast(1));
   odom_qos.best_effort();

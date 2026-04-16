@@ -160,9 +160,9 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
-                package="fake_vel_transform",
-                executable="fake_vel_transform_node",
-                name="fake_vel_transform",
+                package="cmd_vel_transform",
+                executable="cmd_vel_transform_node",
+                name="cmd_vel_transform",
                 output="screen",
                 respawn=use_respawn,
                 respawn_delay=2.0,
@@ -279,9 +279,9 @@ def generate_launch_description():
                 parameters=[configured_params],
             ),
             ComposableNode(
-                package="fake_vel_transform",
-                plugin="fake_vel_transform::FakeVelTransform",
-                name="fake_vel_transform",
+                package="cmd_vel_transform",
+                plugin="cmd_vel_transform::CmdVelTransform",
+                name="cmd_vel_transform",
                 parameters=[configured_params],
             ),
             ComposableNode(
