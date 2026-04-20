@@ -19,9 +19,3 @@
 [submodule "pointcloud_to_laserscan"]
 	path = pointcloud_to_laserscan
 	url = https://github.com/SMBU-PolarBear-Robotics-Team/pointcloud_to_laserscan.git
-[submodule "imu_pipeline"]
-	path = imu_pipeline
-	url = https://github.com/ros-perception/imu_pipeline.git
-[submodule "imu_tools"]
-	path = imu_tools
-	url = https://github.com/CCNYRoboticsLab/imu_tools.git
