@@ -1,23 +1,23 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>pb2025_sentry_nav</name>
+  <name>body_point_cloud_filter</name>
   <version>1.3.2</version>
-  <description>SMBU PolarBear Team Sentry Navigation for Robomaster 2025</description>
+  <description>Body point cloud filter node for combat_sentry_nav.</description>
   <maintainer email="lihanchen2004@163.com">Lihan Chen</maintainer>
   <license>Apache-2.0</license>
+  <author email="lihanchen2004@163.com">Lihan Chen</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <!-- pb25_nav_bringup doesn't belong for recursive dependencies -->
-  <depend>fake_vel_transform</depend>
-  <depend>ign_sim_pointcloud_tool</depend>
-  <depend>loam_interface</depend>
-  <depend>body_point_cloud_filter</depend>
-  <depend>sensor_scan_generation</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>sensor_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_cmake_clang_format</test_depend>
+  <test_depend>ament_cmake_clang_tidy</test_depend>
+  <test_depend>ament_cmake_black</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>
