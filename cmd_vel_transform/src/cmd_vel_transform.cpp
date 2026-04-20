@@ -68,9 +68,12 @@ void CmdVelTransform::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr 
 
   const bool is_zero_vel = std::abs(msg->linear.x) < EPSILON && std::abs(msg->linear.y) < EPSILON &&
                            std::abs(msg->angular.z) < EPSILON;
+  const bool controller_active_recently =
+    has_controller_activation_time_ &&
+    (this->get_clock()->now() - last_controller_activate_time_).seconds() <= CONTROLLER_TIMEOUT;
   if (
     is_zero_vel ||
-    (this->get_clock()->now() - last_controller_activate_time_).seconds() > CONTROLLER_TIMEOUT) {
+    !controller_active_recently) {
     // If current cmd_vel cannot be synchronized, use latest known yaw.
     auto aft_tf_vel = transformVelocity(msg, current_robot_base_angle_);
     cmd_vel_pub_->publish(aft_tf_vel);
@@ -83,6 +86,7 @@ void CmdVelTransform::localPlanCallback(const nav_msgs::msg::Path::ConstSharedPt
 {
   // Consider nav2_controller_server is activated when receiving local_plan
   last_controller_activate_time_ = this->get_clock()->now();
+  has_controller_activation_time_ = true;
 }
 
 void CmdVelTransform::syncCallback(

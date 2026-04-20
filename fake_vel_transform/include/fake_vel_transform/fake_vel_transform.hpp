@@ -80,6 +80,7 @@ private:
   geometry_msgs::msg::Twist::SharedPtr latest_cmd_vel_;
   double current_robot_base_angle_;
   rclcpp::Time last_controller_activate_time_;
+  bool has_controller_activation_time_{false};
 
   rclcpp::Time last_odom_time_;
   double last_odom_x_{0.0};

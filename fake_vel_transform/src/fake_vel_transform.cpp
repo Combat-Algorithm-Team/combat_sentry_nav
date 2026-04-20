@@ -67,7 +67,10 @@ FakeVelTransform::FakeVelTransform(const rclcpp::NodeOptions & options)
 void FakeVelTransform::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg)
 {
   // NOTE: Haven't synced with local_plan
-  if ((rclcpp::Clock().now() - last_controller_activate_time_).seconds() > CONTROLLER_TIMEOUT) {
+  const bool controller_active_recently =
+    has_controller_activation_time_ &&
+    (this->get_clock()->now() - last_controller_activate_time_).seconds() <= CONTROLLER_TIMEOUT;
+  if (!controller_active_recently) {
     current_robot_base_angle_ = tf2::getYaw(msg->pose.pose.orientation);
   }
 }
@@ -77,9 +80,12 @@ void FakeVelTransform::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr
   std::lock_guard<std::mutex> lock(cmd_vel_mutex_);
   const bool is_zero_vel = std::abs(msg->linear.x) < EPSILON && std::abs(msg->linear.y) < EPSILON &&
                            std::abs(msg->angular.z) < EPSILON;
+  const bool controller_active_recently =
+    has_controller_activation_time_ &&
+    (this->get_clock()->now() - last_controller_activate_time_).seconds() <= CONTROLLER_TIMEOUT;
   if (
     is_zero_vel ||
-    (rclcpp::Clock().now() - last_controller_activate_time_).seconds() > CONTROLLER_TIMEOUT) {
+    !controller_active_recently) {
     // If received velocity cannot be synchronized, publish it directly
     auto aft_tf_vel = transformVelocity(msg, current_robot_base_angle_);
     cmd_vel_chassis_pub_->publish(aft_tf_vel);
@@ -91,7 +97,8 @@ void FakeVelTransform::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr
 void FakeVelTransform::localPlanCallback(const nav_msgs::msg::Path::ConstSharedPtr & /*msg*/)
 {
   // Consider nav2_controller_server is activated when receiving local_plan
-  last_controller_activate_time_ = rclcpp::Clock().now();
+  last_controller_activate_time_ = this->get_clock()->now();
+  has_controller_activation_time_ = true;
 }
 
 void FakeVelTransform::syncCallback(
