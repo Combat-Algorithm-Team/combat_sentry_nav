@@ -40,7 +40,7 @@ private:
 
   bool validateFieldLayout(
     const sensor_msgs::msg::PointCloud2 & msg, const sensor_msgs::msg::PointField & field,
-    const char * field_name) const;
+    const char * field_name);
 
   bool readCoordinate(
     const uint8_t * point_data, const sensor_msgs::msg::PointField & field, bool is_bigendian,

@@ -165,7 +165,7 @@ bool BodyPointCloudFilterNode::findField(
 
 bool BodyPointCloudFilterNode::validateFieldLayout(
   const sensor_msgs::msg::PointCloud2 & msg, const sensor_msgs::msg::PointField & field,
-  const char * field_name) const
+  const char * field_name)
 {
   std::size_t field_size = 0U;
   switch (field.datatype) {
