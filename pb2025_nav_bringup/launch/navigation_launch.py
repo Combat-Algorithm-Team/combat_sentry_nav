@@ -159,6 +159,16 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
+            # Node(
+            #     package="atlas_localization_adapter",
+            #     executable="atlas_localization_adapter_node",
+            #     name="atlas_localization_adapter",
+            #     output="screen",
+            #     respawn=use_respawn,
+            #     respawn_delay=2.0,
+            #     parameters=[configured_params],
+            #     arguments=["--ros-args", "--log-level", log_level],
+            # ),
             Node(
                 package="cmd_vel_transform",
                 executable="cmd_vel_transform_node",
@@ -278,6 +288,12 @@ def generate_launch_description():
                 name="sensor_scan_generation",
                 parameters=[configured_params],
             ),
+            # ComposableNode(
+            #     package="atlas_localization_adapter",
+            #     plugin="atlas_localization_adapter::AtlasLocalizationAdapterNode",
+            #     name="atlas_localization_adapter",
+            #     parameters=[configured_params],
+            # ),
             ComposableNode(
                 package="cmd_vel_transform",
                 plugin="cmd_vel_transform::CmdVelTransform",
