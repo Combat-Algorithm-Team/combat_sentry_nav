@@ -80,6 +80,7 @@ private:
 
   std::string input_odom_topic_;
   std::string input_cloud_topic_;
+  std::string input_perception_lidar_topic_;
   std::string registered_scan_topic_;
   std::string lidar_odom_topic_;
   std::string robot_base_odom_topic_;
@@ -90,6 +91,7 @@ private:
   std::string robot_base_frame_;
   std::string robot_base_odom_frame_;
   std::string lidar_frame_;
+  std::string perception_lidar_frame_;
   double tf_lookup_timeout_sec_ = 0.05;
 
   bool base_to_lidar_initialized_ = false;

@@ -26,6 +26,7 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
 {
   this->declare_parameter<std::string>("input_odometry_topic", "aft_mapped_to_init");
   this->declare_parameter<std::string>("input_registered_scan_topic", "cloud_registered");
+  this->declare_parameter<std::string>("input_perception_lidar_topic", "cloud_registered");
   this->declare_parameter<std::string>("registered_scan_topic", "registered_scan");
   this->declare_parameter<std::string>("lidar_odometry_topic", "lidar_odometry");
   this->declare_parameter<std::string>("robot_base_odometry_topic", "odometry");
@@ -36,10 +37,13 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
   this->declare_parameter<std::string>("robot_base_frame", "base_yaw");
   this->declare_parameter<std::string>("robot_base_odom_frame", "base_yaw_odom");
   this->declare_parameter<std::string>("lidar_frame", "front_mid360");
+  this->declare_parameter<std::string>("perception_lidar_frame", "front_mid360");
+  this->declare_parameter<bool>("perception_lidar_enabled", false);
   this->declare_parameter<double>("tf_lookup_timeout_sec", 0.05);
 
   this->get_parameter("input_odometry_topic", input_odom_topic_);
   this->get_parameter("input_registered_scan_topic", input_cloud_topic_);
+  this->get_parameter("input_perception_lidar_topic", input_perception_lidar_topic_);
   this->get_parameter("registered_scan_topic", registered_scan_topic_);
   this->get_parameter("lidar_odometry_topic", lidar_odom_topic_);
   this->get_parameter("robot_base_odometry_topic", robot_base_odom_topic_);
@@ -50,6 +54,7 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
   this->get_parameter("robot_base_frame", robot_base_frame_);
   this->get_parameter("robot_base_odom_frame", robot_base_odom_frame_);
   this->get_parameter("lidar_frame", lidar_frame_);
+  this->get_parameter("perception_lidar_frame", perception_lidar_frame_);
   this->get_parameter("tf_lookup_timeout_sec", tf_lookup_timeout_sec_);
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -66,7 +71,17 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
     this->create_publisher<nav_msgs::msg::Odometry>(base_odom_topic_, 2);
   base_yaw_joint_pub_ =
     this->create_publisher<sensor_msgs::msg::JointState>(base_yaw_joint_topic_, 2);
-
+  
+  bool perception_lidar_enabled = false;
+  this->get_parameter("perception_lidar_enabled", perception_lidar_enabled);
+  if (perception_lidar_enabled) {
+    RCLCPP_INFO(this->get_logger(), "Subscribing to perception LiDAR topic: %s", input_perception_lidar_topic_.c_str());
+    pcd_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
+      input_perception_lidar_topic_, 5,
+      std::bind(&AtlasLocalizationAdapterNode::pointCloudCallback, this, std::placeholders::_1));
+  } else {
+    RCLCPP_INFO(this->get_logger(), "Subscribing to registered scan topic: %s", input_cloud_topic_.c_str());
+    
   pcd_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     input_cloud_topic_, 5,
     std::bind(&AtlasLocalizationAdapterNode::pointCloudCallback, this, std::placeholders::_1));
