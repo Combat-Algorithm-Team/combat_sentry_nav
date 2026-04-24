@@ -38,6 +38,7 @@ def generate_launch_description():
     container_name_full = (namespace, "/", container_name)
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
+    use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
 
     lifecycle_nodes = [
         "controller_server",
@@ -114,6 +115,12 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
 
+    declare_use_atlas_localization_adapter_cmd = DeclareLaunchArgument(
+        "use_atlas_localization_adapter",
+        default_value="False",
+        description="Use atlas_localization_adapter instead of loam_interface and sensor_scan_generation",
+    )
+
     start_terrain_analysis_cmd = Node(
         package="terrain_analysis",
         executable="terrainAnalysis",
@@ -140,6 +147,9 @@ def generate_launch_description():
         condition=IfCondition(PythonExpression(["not ", use_composition])),
         actions=[
             Node(
+                condition=IfCondition(
+                    PythonExpression(["not ", use_atlas_localization_adapter])
+                ),
                 package="loam_interface",
                 executable="loam_interface_node",
                 name="loam_interface",
@@ -150,6 +160,9 @@ def generate_launch_description():
                 arguments=["--ros-args", "--log-level", log_level],
             ),
             Node(
+                condition=IfCondition(
+                    PythonExpression(["not ", use_atlas_localization_adapter])
+                ),
                 package="sensor_scan_generation",
                 executable="sensor_scan_generation_node",
                 name="sensor_scan_generation",
@@ -159,16 +172,17 @@ def generate_launch_description():
                 parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
-            # Node(
-            #     package="atlas_localization_adapter",
-            #     executable="atlas_localization_adapter_node",
-            #     name="atlas_localization_adapter",
-            #     output="screen",
-            #     respawn=use_respawn,
-            #     respawn_delay=2.0,
-            #     parameters=[configured_params],
-            #     arguments=["--ros-args", "--log-level", log_level],
-            # ),
+            Node(
+                condition=IfCondition(use_atlas_localization_adapter),
+                package="atlas_localization_adapter",
+                executable="atlas_localization_adapter_node",
+                name="atlas_localization_adapter",
+                output="screen",
+                respawn=use_respawn,
+                respawn_delay=2.0,
+                parameters=[configured_params],
+                arguments=["--ros-args", "--log-level", log_level],
+            ),
             Node(
                 package="cmd_vel_transform",
                 executable="cmd_vel_transform_node",
@@ -275,8 +289,12 @@ def generate_launch_description():
         ],
     )
 
-    load_composable_nodes = LoadComposableNodes(
-        condition=IfCondition(use_composition),
+    load_default_localization_composable_nodes = LoadComposableNodes(
+        condition=IfCondition(
+            PythonExpression(
+                [use_composition, " and not ", use_atlas_localization_adapter]
+            )
+        ),
         target_container=container_name_full,
         composable_node_descriptions=[
             ComposableNode(
@@ -291,12 +309,28 @@ def generate_launch_description():
                 name="sensor_scan_generation",
                 parameters=[configured_params],
             ),
-            # ComposableNode(
-            #     package="atlas_localization_adapter",
-            #     plugin="atlas_localization_adapter::AtlasLocalizationAdapterNode",
-            #     name="atlas_localization_adapter",
-            #     parameters=[configured_params],
-            # ),
+        ],
+    )
+
+    load_atlas_localization_composable_nodes = LoadComposableNodes(
+        condition=IfCondition(
+            PythonExpression([use_composition, " and ", use_atlas_localization_adapter])
+        ),
+        target_container=container_name_full,
+        composable_node_descriptions=[
+            ComposableNode(
+                package="atlas_localization_adapter",
+                plugin="atlas_localization_adapter::AtlasLocalizationAdapterNode",
+                name="atlas_localization_adapter",
+                parameters=[configured_params],
+            ),
+        ],
+    )
+
+    load_composable_nodes = LoadComposableNodes(
+        condition=IfCondition(use_composition),
+        target_container=container_name_full,
+        composable_node_descriptions=[
             ComposableNode(
                 package="cmd_vel_transform",
                 plugin="cmd_vel_transform::CmdVelTransform",
@@ -384,10 +418,13 @@ def generate_launch_description():
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_use_atlas_localization_adapter_cmd)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_terrain_analysis_cmd)
     ld.add_action(start_terrain_analysis_ext_cmd)
     ld.add_action(load_nodes)
+    ld.add_action(load_default_localization_composable_nodes)
+    ld.add_action(load_atlas_localization_composable_nodes)
     ld.add_action(load_composable_nodes)
 
     return ld

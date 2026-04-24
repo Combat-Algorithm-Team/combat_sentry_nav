@@ -50,6 +50,7 @@ def generate_launch_description():
     use_composition = LaunchConfiguration("use_composition")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
+    use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"use_sim_time": use_sim_time, "yaml_filename": map_yaml_file}
@@ -136,6 +137,12 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
 
+    declare_use_atlas_localization_adapter_cmd = DeclareLaunchArgument(
+        "use_atlas_localization_adapter",
+        default_value="False",
+        description="Use atlas_localization_adapter for odometry and fused perception LiDAR clouds",
+    )
+
     # Specify the actions
     bringup_cmd_group = GroupAction(
         [
@@ -193,6 +200,7 @@ def generate_launch_description():
                     "use_composition": use_composition,
                     "use_respawn": use_respawn,
                     "container_name": "nav2_container",
+                    "use_atlas_localization_adapter": use_atlas_localization_adapter,
                 }.items(),
             ),
         ]
@@ -216,6 +224,7 @@ def generate_launch_description():
     ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_use_atlas_localization_adapter_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(bringup_cmd_group)
