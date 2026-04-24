@@ -38,11 +38,16 @@ private:
   void syncCallback(
     const nav_msgs::msg::Odometry::ConstSharedPtr & odom,
     const nav_msgs::msg::Path::ConstSharedPtr & local_plan);
+  void odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg);
   void localPlanCallback(const nav_msgs::msg::Path::ConstSharedPtr & msg);
   void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
 
+  void updateOdometryState(
+    const nav_msgs::msg::Odometry::ConstSharedPtr & odom, const rclcpp::Time & receive_time);
+  bool getYawForCurrentCommand(const rclcpp::Time & now, double & yaw) const;
+  bool isZeroVelocity(const geometry_msgs::msg::Twist & twist) const;
   geometry_msgs::msg::Twist transformVelocity(
-    const geometry_msgs::msg::Twist::SharedPtr & twist, float yaw_diff);
+    const geometry_msgs::msg::Twist & twist, double yaw_diff) const;
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
 
@@ -61,8 +66,16 @@ private:
   std::string output_cmd_vel_topic_;
 
   std::mutex cmd_vel_mutex_;
-  geometry_msgs::msg::Twist::SharedPtr latest_cmd_vel_;
-  double current_robot_base_angle_{0.0};
+  rclcpp::Time latest_odom_stamp_;
+  rclcpp::Time latest_odom_receive_time_;
+  double latest_odom_yaw_{0.0};
+  bool has_latest_odom_{false};
+
+  rclcpp::Time latest_sync_odom_stamp_;
+  rclcpp::Time latest_sync_receive_time_;
+  double latest_sync_yaw_{0.0};
+  bool has_latest_sync_yaw_{false};
+
   rclcpp::Time last_controller_activate_time_;
   bool has_controller_activation_time_{false};
 };

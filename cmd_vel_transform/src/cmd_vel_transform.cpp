@@ -24,6 +24,7 @@ namespace cmd_vel_transform
 
 constexpr double EPSILON = 1e-5;
 constexpr double CONTROLLER_TIMEOUT = 0.5;
+constexpr double SYNC_YAW_TIMEOUT = 0.2;
 
 CmdVelTransform::CmdVelTransform(const rclcpp::NodeOptions & options)
 : Node("cmd_vel_transform", options)
@@ -51,11 +52,13 @@ CmdVelTransform::CmdVelTransform(const rclcpp::NodeOptions & options)
 
   odom_sub_filter_.subscribe(this, odom_topic_);
   local_plan_sub_filter_.subscribe(this, local_plan_topic_);
+  odom_sub_filter_.registerCallback(
+    std::bind(&CmdVelTransform::odometryCallback, this, std::placeholders::_1));
   local_plan_sub_filter_.registerCallback(
     std::bind(&CmdVelTransform::localPlanCallback, this, std::placeholders::_1));
 
   // In Navigation2 Humble release, cmd_vel is geometry_msgs/Twist without timestamp.
-  // Use local_plan timestamp as cmd_vel time proxy, then sync with odometry.
+  // Use local_plan only as a controller timing hint; velocity output must not depend on it.
   sync_ = std::make_unique<message_filters::Synchronizer<SyncPolicy>>(
     SyncPolicy(100), odom_sub_filter_, local_plan_sub_filter_);
   sync_->registerCallback(
@@ -64,27 +67,37 @@ CmdVelTransform::CmdVelTransform(const rclcpp::NodeOptions & options)
 
 void CmdVelTransform::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
 {
-  std::lock_guard<std::mutex> lock(cmd_vel_mutex_);
-
-  const bool is_zero_vel = std::abs(msg->linear.x) < EPSILON && std::abs(msg->linear.y) < EPSILON &&
-                           std::abs(msg->angular.z) < EPSILON;
-  const bool controller_active_recently =
-    has_controller_activation_time_ &&
-    (this->get_clock()->now() - last_controller_activate_time_).seconds() <= CONTROLLER_TIMEOUT;
-  if (
-    is_zero_vel ||
-    !controller_active_recently) {
-    // If current cmd_vel cannot be synchronized, use latest known yaw.
-    auto aft_tf_vel = transformVelocity(msg, current_robot_base_angle_);
-    cmd_vel_pub_->publish(aft_tf_vel);
-  } else {
-    latest_cmd_vel_ = msg;
+  if (isZeroVelocity(*msg)) {
+    cmd_vel_pub_->publish(geometry_msgs::msg::Twist());
+    return;
   }
+
+  double yaw_diff = 0.0;
+  const rclcpp::Time now = this->get_clock()->now();
+  {
+    std::lock_guard<std::mutex> lock(cmd_vel_mutex_);
+    if (!getYawForCurrentCommand(now, yaw_diff)) {
+      RCLCPP_WARN_THROTTLE(
+        get_logger(), *get_clock(), 1000,
+        "Drop non-zero cmd_vel because no odometry has been received on '%s'.",
+        odom_topic_.c_str());
+      return;
+    }
+  }
+
+  auto aft_tf_vel = transformVelocity(*msg, yaw_diff);
+  cmd_vel_pub_->publish(aft_tf_vel);
+}
+
+void CmdVelTransform::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr & msg)
+{
+  std::lock_guard<std::mutex> lock(cmd_vel_mutex_);
+  updateOdometryState(msg, this->get_clock()->now());
 }
 
 void CmdVelTransform::localPlanCallback(const nav_msgs::msg::Path::ConstSharedPtr & /*msg*/)
 {
-  // Consider nav2_controller_server is activated when receiving local_plan
+  // Keep local_plan as a controller activity hint only. Backup/recovery has no local_plan.
   last_controller_activate_time_ = this->get_clock()->now();
   has_controller_activation_time_ = true;
 }
@@ -94,28 +107,67 @@ void CmdVelTransform::syncCallback(
   const nav_msgs::msg::Path::ConstSharedPtr & /*local_plan_msg*/)
 {
   std::lock_guard<std::mutex> lock(cmd_vel_mutex_);
-  geometry_msgs::msg::Twist::SharedPtr current_cmd_vel;
-  {
-    if (!latest_cmd_vel_) {
-      return;
-    }
-    current_cmd_vel = latest_cmd_vel_;
+  const rclcpp::Time receive_time = this->get_clock()->now();
+  if (!has_latest_odom_) {
+    updateOdometryState(odom_msg, receive_time);
   }
 
-  current_robot_base_angle_ = tf2::getYaw(odom_msg->pose.pose.orientation);
-  float yaw_diff = current_robot_base_angle_;
-  auto aft_tf_vel = transformVelocity(current_cmd_vel, yaw_diff);
+  latest_sync_odom_stamp_ = odom_msg->header.stamp;
+  latest_sync_receive_time_ = receive_time;
+  latest_sync_yaw_ = tf2::getYaw(odom_msg->pose.pose.orientation);
+  has_latest_sync_yaw_ = true;
+}
 
-  cmd_vel_pub_->publish(aft_tf_vel);
+void CmdVelTransform::updateOdometryState(
+  const nav_msgs::msg::Odometry::ConstSharedPtr & odom, const rclcpp::Time & receive_time)
+{
+  latest_odom_stamp_ = odom->header.stamp;
+  latest_odom_receive_time_ = receive_time;
+  latest_odom_yaw_ = tf2::getYaw(odom->pose.pose.orientation);
+  has_latest_odom_ = true;
+}
+
+bool CmdVelTransform::getYawForCurrentCommand(const rclcpp::Time & now, double & yaw) const
+{
+  if (!has_latest_odom_) {
+    return false;
+  }
+
+  yaw = latest_odom_yaw_;
+
+  const bool controller_active_recently =
+    has_controller_activation_time_ &&
+    (now - last_controller_activate_time_).seconds() <= CONTROLLER_TIMEOUT;
+  const bool sync_yaw_recent =
+    has_latest_sync_yaw_ && (now - latest_sync_receive_time_).seconds() <= SYNC_YAW_TIMEOUT;
+  const bool sync_yaw_not_older_than_latest_odom =
+    has_latest_sync_yaw_ &&
+    latest_sync_odom_stamp_.nanoseconds() >= latest_odom_stamp_.nanoseconds();
+
+  if (controller_active_recently && sync_yaw_recent && sync_yaw_not_older_than_latest_odom) {
+    yaw = latest_sync_yaw_;
+  }
+
+  return true;
+}
+
+bool CmdVelTransform::isZeroVelocity(const geometry_msgs::msg::Twist & twist) const
+{
+  return std::abs(twist.linear.x) < EPSILON && std::abs(twist.linear.y) < EPSILON &&
+         std::abs(twist.linear.z) < EPSILON && std::abs(twist.angular.x) < EPSILON &&
+         std::abs(twist.angular.y) < EPSILON && std::abs(twist.angular.z) < EPSILON;
 }
 
 geometry_msgs::msg::Twist CmdVelTransform::transformVelocity(
-  const geometry_msgs::msg::Twist::SharedPtr & twist, float yaw_diff)
+  const geometry_msgs::msg::Twist & twist, double yaw_diff) const
 {
   geometry_msgs::msg::Twist aft_tf_vel;
-  aft_tf_vel.angular.z = twist->angular.z;
-  aft_tf_vel.linear.x = twist->linear.x * cos(yaw_diff) + twist->linear.y * sin(yaw_diff);
-  aft_tf_vel.linear.y = -twist->linear.x * sin(yaw_diff) + twist->linear.y * cos(yaw_diff);
+  aft_tf_vel.angular = twist.angular;
+  aft_tf_vel.linear.z = twist.linear.z;
+  aft_tf_vel.linear.x =
+    twist.linear.x * std::cos(yaw_diff) + twist.linear.y * std::sin(yaw_diff);
+  aft_tf_vel.linear.y =
+    -twist.linear.x * std::sin(yaw_diff) + twist.linear.y * std::cos(yaw_diff);
   return aft_tf_vel;
 }
 
