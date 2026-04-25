@@ -16,6 +16,7 @@
 
 #include "pcl_ros/transforms.hpp"
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
+#include "tf2_sensor_msgs/tf2_sensor_msgs.hpp"
 
 namespace loam_interface
 {
@@ -55,9 +56,23 @@ void LoamInterfaceNode::pointCloudCallback(const sensor_msgs::msg::PointCloud2::
 {
   // NOTE: Input point cloud message is based on the `lidar_odom`
   // Here we transform it to the REAL `odom` frame
-  auto out = std::make_shared<sensor_msgs::msg::PointCloud2>();
+  /*auto out = std::make_shared<sensor_msgs::msg::PointCloud2>();
   pcl_ros::transformPointCloud(odom_frame_, tf_odom_to_lidar_odom_, *msg, *out);
-  pcd_pub_->publish(*out);
+  pcd_pub_->publish(*out);*/
+  auto out = std::make_shared<sensor_msgs::msg::PointCloud2>();
+
+  try {
+    geometry_msgs::msg::TransformStamped tf_stamped = tf_buffer_->lookupTransform(
+      odom_frame_, msg->header.frame_id, msg->header.stamp,
+      rclcpp::Duration::from_seconds(0.5));
+    tf2::doTransform(*msg, *out, tf_stamped);
+    out->header.frame_id = odom_frame_;
+    pcd_pub_->publish(*out);
+  } catch (const tf2::TransformException & ex) {
+    RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "TF lookup failed: %s Skipping point cloud...", ex.what());
+    return;
+  }
+
 }
 
 void LoamInterfaceNode::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
@@ -73,7 +88,7 @@ void LoamInterfaceNode::odometryCallback(const nav_msgs::msg::Odometry::ConstSha
       tf_odom_to_lidar_odom_ = tf_base_frame_to_lidar;
       base_frame_to_lidar_initialized_ = true;
     } catch (tf2::TransformException & ex) {
-      RCLCPP_WARN(this->get_logger(), "TF lookup failed: %s Retrying...", ex.what());
+      RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "TF lookup failed: %s Retrying...", ex.what());
       return;
     }
   }
