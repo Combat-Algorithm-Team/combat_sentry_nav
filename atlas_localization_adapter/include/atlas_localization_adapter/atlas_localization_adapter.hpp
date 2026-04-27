@@ -103,6 +103,8 @@ private:
   bool appendCloudAsXyzi(
     const sensor_msgs::msg::PointCloud2 & msg, pcl::PointCloud<pcl::PointXYZI> & cloud);
 
+  bool ensureIntensityField(sensor_msgs::msg::PointCloud2 & cloud);
+
   bool hasFloat32Field(const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
 
   void enqueuePendingCloud(
@@ -163,7 +165,7 @@ private:
 
   tf2::Transform tf_odom_to_lidar_odom_;
   tf2::Transform tf_lidar_to_perception_lidar_;
-  tf2::Transform tf_lidar_robot_base_;
+  tf2::Transform tf_lidar_to_robot_base_;
   tf2::Transform tf_robot_base_odom_to_base_;
 
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;

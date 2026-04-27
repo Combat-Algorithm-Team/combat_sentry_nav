@@ -165,7 +165,7 @@ bool AtlasLocalizationAdapterNode::initializeRobotBaseTransforms(const rclcpp::T
     return true;
   }
 
-  if (!getTransform(lidar_frame_, robot_base_frame_, stamp, tf_lidar_robot_base_)) {
+  if (!getTransform(lidar_frame_, robot_base_frame_, stamp, tf_lidar_to_robot_base_)) {
     RCLCPP_WARN_THROTTLE(
       this->get_logger(), *this->get_clock(), 1000,
       "Skip Atlas nav outputs while waiting TF from pb robot description at %.6f: %s <- %s.",
@@ -360,7 +360,7 @@ bool AtlasLocalizationAdapterNode::transformCloudToOdom(
   pcl_ros::transformPointCloud(odom_frame_, tf_odom_to_lidar_odom_, *msg, out);
   out.header.stamp = msg->header.stamp;
   out.header.frame_id = odom_frame_;
-  return true;
+  return ensureIntensityField(out);
 }
 
 bool AtlasLocalizationAdapterNode::transformPerceptionCloudToOdom(
@@ -379,7 +379,7 @@ bool AtlasLocalizationAdapterNode::transformPerceptionCloudToOdom(
   pcl_ros::transformPointCloud(odom_frame_, tf_odom_to_perception_lidar_odom, *msg, out);
   out.header.stamp = msg->header.stamp;
   out.header.frame_id = odom_frame_;
-  return true;
+  return ensureIntensityField(out);
 }
 
 bool AtlasLocalizationAdapterNode::mergeClouds(
@@ -422,8 +422,36 @@ bool AtlasLocalizationAdapterNode::appendCloudAsXyzi(
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(msg, "x");
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(msg, "y");
   sensor_msgs::PointCloud2ConstIterator<float> iter_z(msg, "z");
+  const bool has_intensity = hasFloat32Field(msg, "intensity");
   const std::size_t point_count =
     static_cast<std::size_t>(msg.width) * static_cast<std::size_t>(msg.height);
+
+  if (has_intensity) {
+    sensor_msgs::PointCloud2ConstIterator<float> iter_intensity(msg, "intensity");
+    for (std::size_t i = 0; i < point_count; ++i) {
+      if (!std::isfinite(*iter_x) || !std::isfinite(*iter_y) || !std::isfinite(*iter_z)) {
+        ++iter_x;
+        ++iter_y;
+        ++iter_z;
+        ++iter_intensity;
+        continue;
+      }
+
+      pcl::PointXYZI point;
+      point.x = *iter_x;
+      point.y = *iter_y;
+      point.z = *iter_z;
+      point.intensity = std::isfinite(*iter_intensity) ? *iter_intensity : 0.0F;
+      cloud.points.push_back(point);
+
+      ++iter_x;
+      ++iter_y;
+      ++iter_z;
+      ++iter_intensity;
+    }
+
+    return true;
+  }
 
   for (std::size_t i = 0; i < point_count; ++i, ++iter_x, ++iter_y, ++iter_z) {
     if (!std::isfinite(*iter_x) || !std::isfinite(*iter_y) || !std::isfinite(*iter_z)) {
@@ -438,6 +466,28 @@ bool AtlasLocalizationAdapterNode::appendCloudAsXyzi(
     cloud.points.push_back(point);
   }
 
+  return true;
+}
+
+bool AtlasLocalizationAdapterNode::ensureIntensityField(sensor_msgs::msg::PointCloud2 & cloud)
+{
+  if (hasFloat32Field(cloud, "intensity")) {
+    return true;
+  }
+
+  const auto header = cloud.header;
+  pcl::PointCloud<pcl::PointXYZI> xyzi_cloud;
+  xyzi_cloud.points.reserve(static_cast<std::size_t>(cloud.width) * cloud.height);
+  if (!appendCloudAsXyzi(cloud, xyzi_cloud)) {
+    return false;
+  }
+
+  xyzi_cloud.width = static_cast<std::uint32_t>(xyzi_cloud.points.size());
+  xyzi_cloud.height = 1;
+  xyzi_cloud.is_dense = false;
+
+  pcl::toROSMsg(xyzi_cloud, cloud);
+  cloud.header = header;
   return true;
 }
 
@@ -554,16 +604,15 @@ void AtlasLocalizationAdapterNode::odometryCallback(const nav_msgs::msg::Odometr
 
   const tf2::Transform tf_odom_to_lidar =
     tf_odom_to_lidar_odom_ * tf_lidar_odom_to_lidar;
-  const tf2::Transform tf_odom_to_robot_base = tf_odom_to_lidar * tf_lidar_robot_base_;
+  const tf2::Transform tf_odom_to_robot_base = tf_odom_to_lidar * tf_lidar_to_robot_base_;
 
   const double robot_base_yaw = tf2::getYaw(tf_odom_to_robot_base.getRotation());
   publishRobotBaseJoint(robot_base_yaw, stamp);
 
-  const tf2::Transform tf_robot_base_odom_robot_base(
-    tf2::Quaternion(tf2::Vector3(0, 0, 1), robot_base_yaw), tf2::Vector3(0, 0, 0));
+  const tf2::Transform tf_robot_base_to_robot_base_odom(
+    tf2::Quaternion(tf2::Vector3(0, 0, 1), -robot_base_yaw), tf2::Vector3(0, 0, 0));
   const tf2::Transform tf_odom_to_base =
-    (tf_odom_to_robot_base * tf_robot_base_odom_robot_base.inverse()) *
-    tf_robot_base_odom_to_base_;
+    tf_odom_to_robot_base * tf_robot_base_to_robot_base_odom * tf_robot_base_odom_to_base_;
   publishTransform(tf_odom_to_base, odom_frame_, base_frame_, stamp);
 
   geometry_msgs::msg::Twist lidar_twist;
@@ -572,7 +621,7 @@ void AtlasLocalizationAdapterNode::odometryCallback(const nav_msgs::msg::Odometr
     tf_odom_to_lidar, lidar_twist, odom_frame_, lidar_frame_, stamp, lidar_odom_pub_);
 
   geometry_msgs::msg::Twist robot_base_twist;
-  transformTwist(lidar_twist, tf_lidar_robot_base_, robot_base_twist);
+  transformTwist(lidar_twist, tf_lidar_to_robot_base_, robot_base_twist);
   publishOdometry(
     tf_odom_to_robot_base, robot_base_twist, odom_frame_, robot_base_frame_, stamp,
     robot_base_odom_pub_);
