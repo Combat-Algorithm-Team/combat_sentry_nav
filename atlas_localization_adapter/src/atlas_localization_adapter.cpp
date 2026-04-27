@@ -90,8 +90,8 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
   RCLCPP_INFO(
     this->get_logger(), "Subscribing to registered scan topic: %s", input_cloud_topic_.c_str());
   cloud_sub_.subscribe(this, input_cloud_topic_, point_cloud_qos.get_rmw_qos_profile());
-  cloud_sub_.registerCallback(
-    std::bind(&AtlasLocalizationAdapterNode::pointCloudCallback, this, std::placeholders::_1));
+  // cloud_sub_.registerCallback(
+  //   std::bind(&AtlasLocalizationAdapterNode::pointCloudCallback, this, std::placeholders::_1));
 
   if (perception_enable_) {
     RCLCPP_INFO(
@@ -102,9 +102,9 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
 
     perception_cloud_sub_.subscribe(
       this, input_perception_cloud_topic_, point_cloud_qos.get_rmw_qos_profile());
-    perception_cloud_sub_.registerCallback(
-      std::bind(
-        &AtlasLocalizationAdapterNode::perceptionCloudCallback, this, std::placeholders::_1));
+    // perception_cloud_sub_.registerCallback(
+    //   std::bind(
+    //     &AtlasLocalizationAdapterNode::perceptionCloudCallback, this, std::placeholders::_1));
 
     point_cloud_sync_ = std::make_shared<message_filters::Synchronizer<PointCloudSyncPolicy>>(
       PointCloudSyncPolicy(10), cloud_sub_, perception_cloud_sub_);
@@ -115,11 +115,11 @@ AtlasLocalizationAdapterNode::AtlasLocalizationAdapterNode(const rclcpp::NodeOpt
         &AtlasLocalizationAdapterNode::synchronizedPointCloudCallback, this,
         std::placeholders::_1, std::placeholders::_2));
 
-    const double timer_period_sec = std::max(
-      0.01, std::min(0.05, perception_cloud_fallback_timeout_sec_ / 2.0));
-    fusion_fallback_timer_ = this->create_wall_timer(
-      std::chrono::duration<double>(timer_period_sec),
-      std::bind(&AtlasLocalizationAdapterNode::fusionFallbackTimerCallback, this));
+    // const double timer_period_sec = std::max(
+    //   0.01, std::min(0.05, perception_cloud_fallback_timeout_sec_ / 2.0));
+    // fusion_fallback_timer_ = this->create_wall_timer(
+    //   std::chrono::duration<double>(timer_period_sec),
+    //   std::bind(&AtlasLocalizationAdapterNode::fusionFallbackTimerCallback, this));
   }
 
   RCLCPP_INFO(
@@ -203,48 +203,48 @@ bool AtlasLocalizationAdapterNode::getTransform(
   }
 }
 
-void AtlasLocalizationAdapterNode::pointCloudCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
-{
-  sensor_msgs::msg::PointCloud2 primary_cloud;
-  if (!transformCloudToOdom(msg, primary_cloud)) {
-    return;
-  }
+// void AtlasLocalizationAdapterNode::pointCloudCallback(
+//   const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+// {
+//   sensor_msgs::msg::PointCloud2 primary_cloud;
+//   if (!transformCloudToOdom(msg, primary_cloud)) {
+//     return;
+//   }
 
-  if (!perception_enable_) {
-    pcd_pub_->publish(primary_cloud);
-    return;
-  }
+//   if (!perception_enable_) {
+//     pcd_pub_->publish(primary_cloud);
+//     return;
+//   }
 
-  const auto stamp_key = stampKey(primary_cloud);
-  const auto received_time = this->get_clock()->now();
+//   const auto stamp_key = stampKey(primary_cloud);
+//   const auto received_time = this->get_clock()->now();
 
-  std::lock_guard<std::mutex> lock(cloud_mutex_);
-  if (wasHandledRecently(handled_registered_stamp_keys_, stamp_key)) {
-    return;
-  }
+//   std::lock_guard<std::mutex> lock(cloud_mutex_);
+//   if (wasHandledRecently(handled_registered_stamp_keys_, stamp_key)) {
+//     return;
+//   }
 
-  enqueuePendingCloud(pending_registered_clouds_, primary_cloud, received_time);
-}
+//   enqueuePendingCloud(pending_registered_clouds_, primary_cloud, received_time);
+// }
 
-void AtlasLocalizationAdapterNode::perceptionCloudCallback(
-  const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
-{
-  sensor_msgs::msg::PointCloud2 perception_cloud;
-  if (!transformPerceptionCloudToOdom(msg, perception_cloud)) {
-    return;
-  }
+// void AtlasLocalizationAdapterNode::perceptionCloudCallback(
+//   const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg)
+// {
+//   sensor_msgs::msg::PointCloud2 perception_cloud;
+//   if (!transformPerceptionCloudToOdom(msg, perception_cloud)) {
+//     return;
+//   }
 
-  const auto stamp_key = stampKey(perception_cloud);
-  const auto received_time = this->get_clock()->now();
+//   const auto stamp_key = stampKey(perception_cloud);
+//   const auto received_time = this->get_clock()->now();
 
-  std::lock_guard<std::mutex> lock(cloud_mutex_);
-  if (wasHandledRecently(handled_perception_stamp_keys_, stamp_key)) {
-    return;
-  }
+//   std::lock_guard<std::mutex> lock(cloud_mutex_);
+//   if (wasHandledRecently(handled_perception_stamp_keys_, stamp_key)) {
+//     return;
+//   }
 
-  enqueuePendingCloud(pending_perception_clouds_, perception_cloud, received_time);
-}
+//   enqueuePendingCloud(pending_perception_clouds_, perception_cloud, received_time);
+// }
 
 void AtlasLocalizationAdapterNode::synchronizedPointCloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr primary_msg,
@@ -253,97 +253,76 @@ void AtlasLocalizationAdapterNode::synchronizedPointCloudCallback(
   sensor_msgs::msg::PointCloud2 primary_cloud;
   sensor_msgs::msg::PointCloud2 perception_cloud;
   if (!transformCloudToOdom(primary_msg, primary_cloud)) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Failed to transform primary cloud to odom frame, dropping this pair.");
     return;
   }
   if (!transformPerceptionCloudToOdom(perception_msg, perception_cloud)) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Failed to transform perception cloud to odom frame, dropping this pair.");
     return;
   }
 
-  const auto primary_stamp_key = stampKey(primary_cloud);
-  const auto perception_stamp_key = stampKey(perception_cloud);
+  // const auto primary_stamp_key = stampKey(primary_cloud);
+  // const auto perception_stamp_key = stampKey(perception_cloud);
 
-  bool should_fuse = false;
-  bool publish_registered_only = false;
-  bool publish_perception_only = false;
+  // bool should_fuse = false;
+  // bool publish_registered_only = false;
+  // bool publish_perception_only = false;
 
-  {
-    std::lock_guard<std::mutex> lock(cloud_mutex_);
-    const bool registered_handled =
-      wasHandledRecently(handled_registered_stamp_keys_, primary_stamp_key);
-    const bool perception_handled =
-      wasHandledRecently(handled_perception_stamp_keys_, perception_stamp_key);
+  // {
+    // std::lock_guard<std::mutex> lock(cloud_mutex_);
+    // const bool registered_handled =
+    //   wasHandledRecently(handled_registered_stamp_keys_, primary_stamp_key);
+    // const bool perception_handled =
+    //   wasHandledRecently(handled_perception_stamp_keys_, perception_stamp_key);
 
-    if (!registered_handled) {
-      removePendingCloudByStamp(pending_registered_clouds_, primary_stamp_key);
-    }
-    if (!perception_handled) {
-      removePendingCloudByStamp(pending_perception_clouds_, perception_stamp_key);
-    }
+    // if (!registered_handled) {
+    //   removePendingCloudByStamp(pending_registered_clouds_, primary_stamp_key);
+    // }
+    // if (!perception_handled) {
+    //   removePendingCloudByStamp(pending_perception_clouds_, perception_stamp_key);
+    // }
 
-    if (!registered_handled && !perception_handled) {
-      rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
-      rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
-      should_fuse = true;
-    } else {
-      publish_registered_only = !registered_handled;
-      publish_perception_only = !perception_handled;
+    // if (!registered_handled && !perception_handled) {
+    //   rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
+    //   rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
+    //   should_fuse = true;
+    // } else {
+    //   publish_registered_only = !registered_handled;
+    //   publish_perception_only = !perception_handled;
 
-      if (publish_registered_only) {
-        rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
-      }
-      if (publish_perception_only) {
-        rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
-      }
-    }
-  }
+    //   if (publish_registered_only) {
+    //     rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
+    //   }
+    //   if (publish_perception_only) {
+    //     rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
+    //   }
+    // }
+  // }
 
-  if (!should_fuse) {
-    if (publish_registered_only) {
-      pcd_pub_->publish(primary_cloud);
-    }
-    if (publish_perception_only) {
-      pcd_pub_->publish(perception_cloud);
-    }
-    return;
-  }
+  // if (!should_fuse) {
+  //   if (publish_registered_only) {
+  //     pcd_pub_->publish(primary_cloud);
+  //   }
+  //   if (publish_perception_only) {
+  //     pcd_pub_->publish(perception_cloud);
+  //   }
+  //   return;
+  // }
 
   sensor_msgs::msg::PointCloud2 fused_cloud;
   if (!mergeClouds(primary_cloud, perception_cloud, fused_cloud)) {
-    pcd_pub_->publish(primary_cloud);
+    // pcd_pub_->publish(primary_cloud);
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Failed to merge primary and perception clouds, publishing primary cloud only.");
     return;
   }
 
   pcd_pub_->publish(fused_cloud);
-}
-
-void AtlasLocalizationAdapterNode::fusionFallbackTimerCallback()
-{
-  if (!perception_enable_) {
-    return;
-  }
-
-  std::vector<PendingCloud> timed_out_clouds;
-  const auto now = this->get_clock()->now();
-
-  {
-    std::lock_guard<std::mutex> lock(cloud_mutex_);
-    collectTimedOutPendingClouds(
-      pending_registered_clouds_, handled_registered_stamp_keys_, now, timed_out_clouds);
-    collectTimedOutPendingClouds(
-      pending_perception_clouds_, handled_perception_stamp_keys_, now, timed_out_clouds);
-  }
-
-  std::sort(
-    timed_out_clouds.begin(), timed_out_clouds.end(),
-    [](const PendingCloud & lhs, const PendingCloud & rhs) {
-      return lhs.received_time.nanoseconds() < rhs.received_time.nanoseconds();
-    });
-
-  for (const auto & pending_cloud : timed_out_clouds) {
-    if (pending_cloud.cloud) {
-      pcd_pub_->publish(*pending_cloud.cloud);
-    }
-  }
 }
 
 bool AtlasLocalizationAdapterNode::transformCloudToOdom(
@@ -469,27 +448,27 @@ bool AtlasLocalizationAdapterNode::appendCloudAsXyzi(
   return true;
 }
 
-bool AtlasLocalizationAdapterNode::ensureIntensityField(sensor_msgs::msg::PointCloud2 & cloud)
-{
-  if (hasFloat32Field(cloud, "intensity")) {
-    return true;
-  }
+// bool AtlasLocalizationAdapterNode::ensureIntensityField(sensor_msgs::msg::PointCloud2 & cloud)
+// {
+//   if (hasFloat32Field(cloud, "intensity")) {
+//     return true;
+//   }
 
-  const auto header = cloud.header;
-  pcl::PointCloud<pcl::PointXYZI> xyzi_cloud;
-  xyzi_cloud.points.reserve(static_cast<std::size_t>(cloud.width) * cloud.height);
-  if (!appendCloudAsXyzi(cloud, xyzi_cloud)) {
-    return false;
-  }
+//   const auto header = cloud.header;
+//   pcl::PointCloud<pcl::PointXYZI> xyzi_cloud;
+//   xyzi_cloud.points.reserve(static_cast<std::size_t>(cloud.width) * cloud.height);
+//   if (!appendCloudAsXyzi(cloud, xyzi_cloud)) {
+//     return false;
+//   }
 
-  xyzi_cloud.width = static_cast<std::uint32_t>(xyzi_cloud.points.size());
-  xyzi_cloud.height = 1;
-  xyzi_cloud.is_dense = false;
+//   xyzi_cloud.width = static_cast<std::uint32_t>(xyzi_cloud.points.size());
+//   xyzi_cloud.height = 1;
+//   xyzi_cloud.is_dense = false;
 
-  pcl::toROSMsg(xyzi_cloud, cloud);
-  cloud.header = header;
-  return true;
-}
+//   pcl::toROSMsg(xyzi_cloud, cloud);
+//   cloud.header = header;
+//   return true;
+// }
 
 bool AtlasLocalizationAdapterNode::hasFloat32Field(
   const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const
@@ -502,92 +481,92 @@ bool AtlasLocalizationAdapterNode::hasFloat32Field(
   return false;
 }
 
-void AtlasLocalizationAdapterNode::enqueuePendingCloud(
-  std::deque<PendingCloud> & pending_clouds, const sensor_msgs::msg::PointCloud2 & cloud,
-  const rclcpp::Time & received_time)
-{
-  const auto stamp_key = stampKey(cloud);
-  for (auto & pending_cloud : pending_clouds) {
-    if (pending_cloud.stamp_key == stamp_key) {
-      pending_cloud.cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
-      pending_cloud.received_time = received_time;
-      return;
-    }
-  }
+// void AtlasLocalizationAdapterNode::enqueuePendingCloud(
+//   std::deque<PendingCloud> & pending_clouds, const sensor_msgs::msg::PointCloud2 & cloud,
+//   const rclcpp::Time & received_time)
+// {
+//   const auto stamp_key = stampKey(cloud);
+//   for (auto & pending_cloud : pending_clouds) {
+//     if (pending_cloud.stamp_key == stamp_key) {
+//       pending_cloud.cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
+//       pending_cloud.received_time = received_time;
+//       return;
+//     }
+//   }
 
-  PendingCloud pending_cloud;
-  pending_cloud.cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
-  pending_cloud.received_time = received_time;
-  pending_cloud.stamp_key = stamp_key;
-  pending_clouds.push_back(pending_cloud);
-}
+//   PendingCloud pending_cloud;
+//   pending_cloud.cloud = std::make_shared<sensor_msgs::msg::PointCloud2>(cloud);
+//   pending_cloud.received_time = received_time;
+//   pending_cloud.stamp_key = stamp_key;
+//   pending_clouds.push_back(pending_cloud);
+// }
 
-bool AtlasLocalizationAdapterNode::removePendingCloudByStamp(
-  std::deque<PendingCloud> & pending_clouds, const std::int64_t stamp_key)
-{
-  for (auto it = pending_clouds.begin(); it != pending_clouds.end(); ++it) {
-    if (it->stamp_key == stamp_key) {
-      pending_clouds.erase(it);
-      return true;
-    }
-  }
-  return false;
-}
+// bool AtlasLocalizationAdapterNode::removePendingCloudByStamp(
+//   std::deque<PendingCloud> & pending_clouds, const std::int64_t stamp_key)
+// {
+//   for (auto it = pending_clouds.begin(); it != pending_clouds.end(); ++it) {
+//     if (it->stamp_key == stamp_key) {
+//       pending_clouds.erase(it);
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 
-void AtlasLocalizationAdapterNode::collectTimedOutPendingClouds(
-  std::deque<PendingCloud> & pending_clouds, std::deque<std::int64_t> & handled_stamp_keys,
-  const rclcpp::Time & now, std::vector<PendingCloud> & timed_out_clouds)
-{
-  while (!pending_clouds.empty()) {
-    const auto & pending_cloud = pending_clouds.front();
-    if (!isPendingCloudTimedOut(pending_cloud, now)) {
-      break;
-    }
+// void AtlasLocalizationAdapterNode::collectTimedOutPendingClouds(
+//   std::deque<PendingCloud> & pending_clouds, std::deque<std::int64_t> & handled_stamp_keys,
+//   const rclcpp::Time & now, std::vector<PendingCloud> & timed_out_clouds)
+// {
+//   while (!pending_clouds.empty()) {
+//     const auto & pending_cloud = pending_clouds.front();
+//     if (!isPendingCloudTimedOut(pending_cloud, now)) {
+//       break;
+//     }
 
-    if (pending_cloud.cloud && !wasHandledRecently(handled_stamp_keys, pending_cloud.stamp_key)) {
-      rememberHandledStamp(handled_stamp_keys, pending_cloud.stamp_key);
-      timed_out_clouds.push_back(pending_cloud);
-    }
+//     if (pending_cloud.cloud && !wasHandledRecently(handled_stamp_keys, pending_cloud.stamp_key)) {
+//       rememberHandledStamp(handled_stamp_keys, pending_cloud.stamp_key);
+//       timed_out_clouds.push_back(pending_cloud);
+//     }
 
-    pending_clouds.pop_front();
-  }
-}
+//     pending_clouds.pop_front();
+//   }
+// }
 
-bool AtlasLocalizationAdapterNode::isPendingCloudTimedOut(
-  const PendingCloud & pending_cloud, const rclcpp::Time & now) const
-{
-  if (!pending_cloud.cloud) {
-    return true;
-  }
+// bool AtlasLocalizationAdapterNode::isPendingCloudTimedOut(
+//   const PendingCloud & pending_cloud, const rclcpp::Time & now) const
+// {
+//   if (!pending_cloud.cloud) {
+//     return true;
+//   }
 
-  return (now - pending_cloud.received_time).seconds() >= perception_cloud_fallback_timeout_sec_;
-}
+//   return (now - pending_cloud.received_time).seconds() >= perception_cloud_fallback_timeout_sec_;
+// }
 
-void AtlasLocalizationAdapterNode::rememberHandledStamp(
-  std::deque<std::int64_t> & handled_stamp_keys, const std::int64_t stamp_key)
-{
-  handled_stamp_keys.push_back(stamp_key);
-  while (handled_stamp_keys.size() > kHandledStampHistorySize) {
-    handled_stamp_keys.pop_front();
-  }
-}
+// void AtlasLocalizationAdapterNode::rememberHandledStamp(
+//   std::deque<std::int64_t> & handled_stamp_keys, const std::int64_t stamp_key)
+// {
+//   handled_stamp_keys.push_back(stamp_key);
+//   while (handled_stamp_keys.size() > kHandledStampHistorySize) {
+//     handled_stamp_keys.pop_front();
+//   }
+// }
 
-bool AtlasLocalizationAdapterNode::wasHandledRecently(
-  const std::deque<std::int64_t> & handled_stamp_keys, const std::int64_t stamp_key) const
-{
-  for (const auto handled_stamp_key : handled_stamp_keys) {
-    if (handled_stamp_key == stamp_key) {
-      return true;
-    }
-  }
-  return false;
-}
+// bool AtlasLocalizationAdapterNode::wasHandledRecently(
+//   const std::deque<std::int64_t> & handled_stamp_keys, const std::int64_t stamp_key) const
+// {
+//   for (const auto handled_stamp_key : handled_stamp_keys) {
+//     if (handled_stamp_key == stamp_key) {
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 
-std::int64_t AtlasLocalizationAdapterNode::stampKey(
-  const sensor_msgs::msg::PointCloud2 & cloud) const
-{
-  return rclcpp::Time(cloud.header.stamp).nanoseconds();
-}
+// std::int64_t AtlasLocalizationAdapterNode::stampKey(
+//   const sensor_msgs::msg::PointCloud2 & cloud) const
+// {
+//   return rclcpp::Time(cloud.header.stamp).nanoseconds();
+// }
 
 void AtlasLocalizationAdapterNode::odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg)
 {
