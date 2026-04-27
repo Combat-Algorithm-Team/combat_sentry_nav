@@ -220,11 +220,11 @@ void AtlasLocalizationAdapterNode::pointCloudCallback(
   const auto received_time = this->get_clock()->now();
 
   std::lock_guard<std::mutex> lock(cloud_mutex_);
-  if (wasHandledRecently(handled_registered_stamp_keys_, stamp_key)) {
+  if (wasHandledRecently(handled_primary_stamp_keys_, stamp_key)) {
     return;
   }
 
-  enqueuePendingCloud(pending_registered_clouds_, primary_cloud, received_time);
+  enqueuePendingCloud(pending_primary_clouds_, primary_cloud, received_time);
 }
 
 void AtlasLocalizationAdapterNode::perceptionCloudCallback(
@@ -269,19 +269,19 @@ void AtlasLocalizationAdapterNode::synchronizedPointCloudCallback(
   {
     std::lock_guard<std::mutex> lock(cloud_mutex_);
     const bool registered_handled =
-      wasHandledRecently(handled_registered_stamp_keys_, primary_stamp_key);
+      wasHandledRecently(handled_primary_stamp_keys_, primary_stamp_key);
     const bool perception_handled =
       wasHandledRecently(handled_perception_stamp_keys_, perception_stamp_key);
 
     if (!registered_handled) {
-      removePendingCloudByStamp(pending_registered_clouds_, primary_stamp_key);
+      removePendingCloudByStamp(pending_primary_clouds_, primary_stamp_key);
     }
     if (!perception_handled) {
       removePendingCloudByStamp(pending_perception_clouds_, perception_stamp_key);
     }
 
     if (!registered_handled && !perception_handled) {
-      rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
+      rememberHandledStamp(handled_primary_stamp_keys_, primary_stamp_key);
       rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
       should_fuse = true;
     } else {
@@ -289,7 +289,7 @@ void AtlasLocalizationAdapterNode::synchronizedPointCloudCallback(
       publish_perception_only = !perception_handled;
 
       if (publish_registered_only) {
-        rememberHandledStamp(handled_registered_stamp_keys_, primary_stamp_key);
+        rememberHandledStamp(handled_primary_stamp_keys_, primary_stamp_key);
       }
       if (publish_perception_only) {
         rememberHandledStamp(handled_perception_stamp_keys_, perception_stamp_key);
@@ -328,7 +328,7 @@ void AtlasLocalizationAdapterNode::fusionFallbackTimerCallback()
   {
     std::lock_guard<std::mutex> lock(cloud_mutex_);
     collectTimedOutPendingClouds(
-      pending_registered_clouds_, handled_registered_stamp_keys_, now, timed_out_clouds);
+      pending_primary_clouds_, handled_primary_stamp_keys_, now, timed_out_clouds);
     collectTimedOutPendingClouds(
       pending_perception_clouds_, handled_perception_stamp_keys_, now, timed_out_clouds);
   }

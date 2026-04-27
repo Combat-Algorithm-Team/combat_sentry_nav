@@ -158,9 +158,9 @@ private:
   bool robot_base_transforms_initialized_ = false;
 
   mutable std::mutex cloud_mutex_;
-  std::deque<PendingCloud> pending_registered_clouds_;
+  std::deque<PendingCloud> pending_primary_clouds_;
   std::deque<PendingCloud> pending_perception_clouds_;
-  std::deque<std::int64_t> handled_registered_stamp_keys_;
+  std::deque<std::int64_t> handled_primary_stamp_keys_;
   std::deque<std::int64_t> handled_perception_stamp_keys_;
 
   tf2::Transform tf_odom_to_lidar_odom_;
