@@ -19,6 +19,7 @@ ament_auto_package(
   map
   pcd
   config
+  xmacro
   behavior_trees
   rviz
 )

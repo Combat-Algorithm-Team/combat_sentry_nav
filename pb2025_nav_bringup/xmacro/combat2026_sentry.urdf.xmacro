@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<robot name="rm26_sentry_robot">
+
+    <!-- Base footprint -->
+    <link name="base_footprint"/>
+    
+    <!-- Chassis link -->
+    <link name="chassis"/>
+    
+    <!-- Base footprint to chassis joint -->
+    <joint name="base_to_chassis" type="fixed">
+        <parent link="base_footprint"/>
+        <child link="chassis"/>
+        <origin xyz="0 0 0.09" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Base yaw odom link-->
+    <link name="base_yaw_odom"/>
+    
+    <!-- Chassis to base yaw odom joint -->
+    <joint name="base_yaw_odom_joint" type="fixed">
+        <parent link="chassis"/>
+        <child link="base_yaw_odom"/>
+        <origin xyz="0 0 0.087" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Base yaw link-->
+    <link name="base_yaw"/>
+    
+    <!-- base yaw odom to base yaw joint -->
+    <joint name="base_yaw_joint" type="continuous">
+        <parent link="base_yaw_odom"/>
+        <child link="base_yaw"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+    </joint>
+
+    <!-- front mid360 link-->
+    <link name="front_mid360"/>
+
+    <!-- Base yaw to front mid360 joint -->
+    <joint name="livox_joint" type="fixed">
+        <parent link="base_yaw"/>
+        <child link="front_mid360"/>
+        <origin xyz="0.12088 0 0.17608" rpy="-${pi/6} 0 -${pi/2}"/>
+    </joint>
+
+    <!-- odin1 link-->
+    <link name="odin1_base_link"/>
+
+    <!-- Base yaw to odin1 joint -->
+    <joint name="odin1_joint" type="fixed">
+        <parent link="base_yaw"/>
+        <child link="odin1_base_link"/>
+        <origin xyz="-0.22131 0.01897 0.30746" rpy="0 0 -${pi}"/>
+    </joint>
+
+    <!-- vision -->
+    <link name="odom_vision" />
+    <joint name="vision_joint" type="floating">
+        <parent link="base_yaw_odom"/>
+        <child link="odom_vision"/>
+    </joint>
+
+</robot>
