@@ -94,6 +94,15 @@ loam_interface:
     base_frame: "base_footprint"
     lidar_frame: "front_mid360"
 
+sensor_scan_generation:
+  ros__parameters:
+    use_sim_time: False
+    lidar_frame: "front_mid360"
+    base_frame: "base_footprint"
+    robot_base_frame: "base_yaw"
+    robot_base_odom_frame: "base_yaw_odom"
+    tf_lookup_timeout_sec: 0.05
+
 atlas_localization_adapter:
   ros__parameters:
     use_sim_time: False
@@ -113,15 +122,6 @@ atlas_localization_adapter:
     perception_enable: False
     perception_lidar_fusion_time_tolerance_sec: 0.15
     perception_lidar_fallback_timeout_sec: 0.20
-    tf_lookup_timeout_sec: 0.05
-
-sensor_scan_generation:
-  ros__parameters:
-    use_sim_time: False
-    lidar_frame: "front_mid360"
-    base_frame: "base_footprint"
-    robot_base_frame: "base_yaw"
-    robot_base_odom_frame: "base_yaw_odom"
     tf_lookup_timeout_sec: 0.05
 
 terrain_analysis:

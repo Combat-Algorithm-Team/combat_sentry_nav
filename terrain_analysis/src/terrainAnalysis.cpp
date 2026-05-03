@@ -252,7 +252,7 @@ int main(int argc, char ** argv)
   nh->get_parameter("disRatioZ", disRatioZ);
 
   auto subOdometry =
-    nh->create_subscription<nav_msgs::msg::Odometry>("lidar_odometry", 5, odometryHandler);
+    nh->create_subscription<nav_msgs::msg::Odometry>("odometry", 5, odometryHandler);
 
   auto subLaserCloud =
     nh->create_subscription<sensor_msgs::msg::PointCloud2>("registered_scan", 5, laserCloudHandler);
