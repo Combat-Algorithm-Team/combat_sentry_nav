@@ -130,7 +130,10 @@ def generate_launch_description():
                     {
                         "use_sim_time": use_sim_time,
                         "rate": 200.0,
-                        "source_list": ["base_yaw_joint_publisher"],
+                        "source_list": [
+                            "base_yaw_joint_publisher",
+                            "gimbal_joint_publisher",
+                        ],
                         "offset_timestamp": 0.0,
                     },
                 ],

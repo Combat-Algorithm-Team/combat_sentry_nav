@@ -55,11 +55,26 @@
         <origin xyz="-0.22131 0.01897 0.30746" rpy="0 0 -${pi}"/>
     </joint>
 
-    <!-- vision -->
-    <link name="odom_vision" />
-    <joint name="vision_joint" type="floating">
-        <parent link="base_yaw_odom"/>
-        <child link="odom_vision"/>
+    <!-- Gimbal yaw link-->
+    <link name="gimbal_yaw"/>
+
+    <!-- Base yaw to Gimbal yaw joint -->
+    <joint name="gimbal_yaw_joint" type="continuous">
+        <parent link="base_yaw"/>
+        <child link="gimbal_yaw"/>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <axis xyz="0 0 1"/>
+    </joint>
+
+    <!-- Gimbal pitch link-->
+    <link name="gimbal_pitch"/>
+
+    <!-- Gimbal yaw to Gimbal pitch joint -->
+    <joint name="gimbal_pitch_joint" type="continuous">
+        <parent link="gimbal_yaw"/>
+        <child link="gimbal_pitch"/>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <axis xyz="0 1 0"/>
     </joint>
 
 </robot>
