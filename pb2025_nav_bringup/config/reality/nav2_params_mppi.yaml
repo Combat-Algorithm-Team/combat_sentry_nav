@@ -157,9 +157,9 @@ sensor_scan_generation:
 atlas_localization_adapter:
   ros__parameters:
     use_sim_time: False
-    input_odometry_topic: "aft_mapped_to_init"
-    input_cloud_topic: "cloud_registered"
-    input_perception_cloud_topic: "odin1/cloud_slam"
+    input_odometry_topic: "odin1/odometry"
+    input_cloud_topic: "odin1/cloud_slam"
+    input_perception_cloud_topic: "cloud_registered"
     registered_scan_topic: "registered_scan"
     lidar_odometry_topic: "lidar_odometry"
     robot_base_odometry_topic: "odometry"
@@ -168,11 +168,12 @@ atlas_localization_adapter:
     base_frame: "base_footprint"
     robot_base_frame: "base_yaw"
     robot_base_odom_frame: "base_yaw_odom"
-    lidar_frame: "front_mid360"
-    perception_lidar_frame: "odin1_base_link"
-    perception_enable: False
+    lidar_frame: "odin1_base_link"
+    perception_lidar_frame: "front_mid360"
+    perception_enable: True
     perception_lidar_fusion_time_tolerance_sec: 0.05
     tf_lookup_timeout_sec: 0.05
+
 
 terrain_analysis:
   ros__parameters:
