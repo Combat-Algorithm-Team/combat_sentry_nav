@@ -10,6 +10,57 @@ livox_ros_driver2:
     cmdline_input_bd_code: livox0000000001
     lvx_file_path: ""
 
+small_point_lio:
+  ros__parameters:
+    lidar_topic: "livox/lidar"                    # 对应 point_lio.common.lid_topic
+    imu_topic: "livox/imu"                        # 对应 point_lio.common.imu_topic
+    lidar_type: livox_custom_msg                  # 对应 point_lio.preprocess.lidar_type: 1
+    lidar_frame: front_mid360                     # 与本 bringup 的 Livox frame_id 保持一致
+    save_pcd: false                               # 对应 point_lio.pcd_save.pcd_save_en
+
+    # 点云过滤
+    point_filter_num: 8                           # 对应 point_lio.point_filter_num, 可以测试取1时的效果
+    min_distance: 0.5                             # 对应 point_lio.preprocess.blind
+    max_distance: 300.0                           # 对应 point_lio.mapping.det_range 的源码默认值
+    space_downsample: true                        # 对应 point_lio.space_down_sample
+    space_downsample_leaf_size: 0.2               # 对应 point_lio.filter_size_surf/filter_size_map
+
+    # IMU处理
+    gravity: [0.0, 0.50, -0.866]                  # 对应 point_lio.mapping.gravity
+    fix_gravity_direction: true                  # 使用上方 gravity，而不是启动时重新估计方向
+    check_satu: true                              # 对应 point_lio.check_satu
+    satu_acc: 3.0                                 # 对应 point_lio.mapping.satu_acc
+    satu_gyro: 35.0                               # 对应 point_lio.mapping.satu_gyro
+    acc_norm: 1.0                                 # 对应 point_lio.mapping.acc_norm
+
+    # 地图
+    map_resolution: 0.5                           # 对应 point_lio.mapping.ivox_grid_resolution
+    init_map_size: 10                             # 对应 point_lio.init_map_size
+
+    # 雷达与IMU相对位姿
+    extrinsic_est_en: false                       # 对应 point_lio.mapping.extrinsic_est_en
+    extrinsic_T: [-0.011, -0.02329, 0.04412]      # 对应 point_lio.mapping.extrinsic_T
+    extrinsic_R: [1.0, 0.0, 0.0,                  # 对应 point_lio.mapping.extrinsic_R
+                  0.0, 1.0, 0.0,
+                  0.0, 0.0, 1.0]
+
+    # 滤波器参数
+    # R
+    laser_point_cov: 0.01                         # 对应 point_lio.mapping.lidar_meas_cov
+    imu_meas_acc_cov: 0.1                         # 对应 point_lio.mapping.imu_meas_acc_cov. 测试0.01
+    imu_meas_omg_cov: 0.1                         # 对应 point_lio.mapping.imu_meas_omg_cov。测试0.01
+    # Q
+    velocity_cov: 20.0                            # 对应 point_lio.mapping.vel_cov 的源码默认值
+    acceleration_cov: 500.0                       # 对应 point_lio.mapping.acc_cov_output
+    omg_cov: 1000.0                               # 对应 point_lio.mapping.gyr_cov_output
+    ba_cov: 0.0001                                # 对应 point_lio.mapping.b_acc_cov
+    bg_cov: 0.0001                                # 对应 point_lio.mapping.b_gyr_cov
+    plane_threshold: 0.1                          # 对应 point_lio.mapping.plane_thr
+    match_sqaured: 81.0                           # 对应 point_lio.mapping.match_s
+
+    # 数据发布
+    publish_odometry_without_downsample: false     # 对应 point_lio.odometry.publish_odometry_without_downsample。测试true
+
 point_lio:
   ros__parameters:
     use_imu_as_input: False                             # Change to True to use IMU as input of Point-LIO
@@ -120,8 +171,7 @@ atlas_localization_adapter:
     lidar_frame: "front_mid360"
     perception_lidar_frame: "odin1_base_link"
     perception_enable: False
-    perception_lidar_fusion_time_tolerance_sec: 0.15
-    perception_lidar_fallback_timeout_sec: 0.20
+    perception_lidar_fusion_time_tolerance_sec: 0.05
     tf_lookup_timeout_sec: 0.05
 
 terrain_analysis:

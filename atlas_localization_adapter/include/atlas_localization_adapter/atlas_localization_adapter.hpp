@@ -15,12 +15,8 @@
 #ifndef ATLAS_LOCALIZATION_ADAPTER__ATLAS_LOCALIZATION_ADAPTER_HPP_
 #define ATLAS_LOCALIZATION_ADAPTER__ATLAS_LOCALIZATION_ADAPTER_HPP_
 
-#include <cstdint>
-#include <deque>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <vector>
 
 #include "message_filters/subscriber.h"
 #include "message_filters/sync_policies/approximate_time.h"
@@ -50,15 +46,6 @@ private:
     sensor_msgs::msg::PointCloud2,
     sensor_msgs::msg::PointCloud2>;
 
-  struct PendingCloud
-  {
-    sensor_msgs::msg::PointCloud2::SharedPtr cloud;
-    rclcpp::Time received_time{0, 0, RCL_ROS_TIME};
-    std::int64_t stamp_key = 0;
-  };
-
-  static constexpr std::size_t kHandledStampHistorySize = 64U;
-
   bool initializeBaseToLidarTransform(
     const rclcpp::Time & stamp);
 
@@ -79,13 +66,9 @@ private:
 
   void pointCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
 
-  void perceptionCloudCallback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr msg);
-
   void synchronizedPointCloudCallback(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr primary_msg,
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr perception_msg);
-
-  void fusionFallbackTimerCallback();
 
   bool transformCloudToOdom(
     const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg,
@@ -106,27 +89,6 @@ private:
   bool ensureIntensityField(sensor_msgs::msg::PointCloud2 & cloud);
 
   bool hasFloat32Field(const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
-
-  void enqueuePendingCloud(
-    std::deque<PendingCloud> & pending_clouds, const sensor_msgs::msg::PointCloud2 & cloud,
-    const rclcpp::Time & received_time);
-
-  bool removePendingCloudByStamp(
-    std::deque<PendingCloud> & pending_clouds, std::int64_t stamp_key);
-
-  void collectTimedOutPendingClouds(
-    std::deque<PendingCloud> & pending_clouds, std::deque<std::int64_t> & handled_stamp_keys,
-    const rclcpp::Time & now, std::vector<PendingCloud> & timed_out_clouds);
-
-  bool isPendingCloudTimedOut(const PendingCloud & pending_cloud, const rclcpp::Time & now) const;
-
-  void rememberHandledStamp(
-    std::deque<std::int64_t> & handled_stamp_keys, std::int64_t stamp_key);
-
-  bool wasHandledRecently(
-    const std::deque<std::int64_t> & handled_stamp_keys, std::int64_t stamp_key) const;
-
-  std::int64_t stampKey(const sensor_msgs::msg::PointCloud2 & cloud) const;
 
   void odometryCallback(const nav_msgs::msg::Odometry::ConstSharedPtr msg);
 
@@ -150,18 +112,11 @@ private:
   std::string lidar_frame_;
   std::string perception_lidar_frame_;
   double tf_lookup_timeout_sec_ = 0.05;
-  double perception_cloud_fusion_time_tolerance_sec_ = 0.15;
-  double perception_cloud_fallback_timeout_sec_ = 0.2;
+  double perception_cloud_fusion_time_tolerance_sec_ = 0.05;
 
   bool perception_enable_ = false;
   bool base_to_lidar_initialized_ = false;
   bool robot_base_transforms_initialized_ = false;
-
-  mutable std::mutex cloud_mutex_;
-  std::deque<PendingCloud> pending_primary_clouds_;
-  std::deque<PendingCloud> pending_perception_clouds_;
-  std::deque<std::int64_t> handled_primary_stamp_keys_;
-  std::deque<std::int64_t> handled_perception_stamp_keys_;
 
   tf2::Transform tf_odom_to_lidar_odom_;
   tf2::Transform tf_lidar_to_perception_lidar_;
@@ -181,7 +136,6 @@ private:
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> perception_cloud_sub_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub_;
   std::shared_ptr<message_filters::Synchronizer<PointCloudSyncPolicy>> point_cloud_sync_;
-  rclcpp::TimerBase::SharedPtr fusion_fallback_timer_;
 };
 
 }  // namespace atlas_localization_adapter
