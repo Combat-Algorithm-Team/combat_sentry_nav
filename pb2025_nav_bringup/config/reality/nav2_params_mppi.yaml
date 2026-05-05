@@ -404,7 +404,7 @@ controller_server:
   ros__parameters:
     use_sim_time: False
     odom_topic: odometry
-    controller_frequency: 20.0
+    controller_frequency: 50.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.001
     min_theta_velocity_threshold: 0.001
@@ -414,13 +414,13 @@ controller_server:
     controller_plugins: ["FollowPath"]
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.5
-      movement_time_allowance: 10.0
+      required_movement_radius: 0.1
+      movement_time_allowance: 20.0
     general_goal_checker:
-      stateful: True
-      plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15
-      yaw_goal_tolerance: 6.28
+      stateful: False
+      plugin: "nav2_controller::PositionGoalChecker"
+      xy_goal_tolerance: 0.2 
+      path_length_tolerance: 0.5
     FollowPath:
       plugin: "pb_omni_pid_pursuit_controller::OmniPidPursuitController"
       translation_kp: 3.5
@@ -453,20 +453,115 @@ controller_server:
       curvature_backward_dist: 0.3                      # 后向距离，用于曲率计算
       max_velocity_scaling_factor_rate: 0.9             # 速度缩放因子的最大变化率
 
+# FollowPath:
+#       plugin: "goal_approach_controller::GoalApproachController"
+#       inner_plugin: "nav2_mppi_controller::MPPIController"
+#       approach_distance: 2.5  #距目标时开始限速
+#       approach_velocity: 0.2
+#       direct_approach_distance: 2.0  #进入直接驱动模式的距离，绕过MPPI防止画弧
+#       direct_approach_kp: 3.0  #直接驱动P控制增益
+#       time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
+#       model_dt: 0.02  #稍微放大步长，配合time_steps延长预测时域
+#       batch_size: 1500 #控制器的采样数。
+
+#       vx_std: 0.3 #增大采样多样性，让MPPI能采到更多减速/停止轨迹
+#       vy_std: 0.3
+#       wz_std: 0.2
+
+#       vx_max: 2.5
+#       vy_max: 2.5
+#       wz_max: 1.5
+
+#       vx_min: -2.5
+#       vy_min: -2.5
+#       wz_min: -1.5
+
+#       ax_max: 1.5 #加速度提高，高速时能快速响应
+#       ay_max: 1.5
+#       az_max: 1.0
+
+#       ax_min: -3.5 #关键：制动力必须对称，高速下刹得住
+#       ay_min: -3.5
+#       az_min: -3.0
+
+#       iteration_count: 1
+#       prune_distance: 1.7 #高速下提前剪枝已通过的路径点
+#       transform_tolerance: 0.1
+#       temperature: 0.25 #大幅降低：让 MPPI 更果断选最优轨迹，不在次优之间摇摆
+#       gamma: 0.015 #稍微提高正则化，减少激进抖动
+#       motion_model: "Omni" #控制器的运动模型。
+#       visualize: false #是否可视化。
+#       reset_period: 0.08 # (only in Humble)
+#       TrajectoryVisualizer:
+#         trajectory_step: 5 #是指在可视化轨迹时，每隔多少个轨迹点绘制一个点。
+#         time_step: 3 #是指在可视化轨迹时，每隔多少个时间步长绘制一个点。
+#       critics: ["ConstraintCritic", "CostCritic", 
+#                 "GoalCritic", "PathFollowCritic", 
+#                 "PathAlignCritic", "ObstaclesCritic"
+#                 ]
+
+#       ConstraintCritic:
+#         enabled: true
+#         cost_power: 1
+#         cost_weight: 4.0
+
+#       GoalCritic: #必须开启，否则机器人没有到达目标的动力
+#         enabled: true
+#         cost_power: 1
+#         cost_weight: 25.0 #提高权重，增强最终接近阶段的目标吸引力，防止弧线绕圈
+#         threshold_to_consider: 4.0
+#       ObstaclesCritic: #开启提供额外的障碍物排斥力
+#         enabled: true
+#         cost_power: 1
+#         repulsion_weight: 1.5 #排斥权重
+#         critical_weight: 20.0 #近距离障碍物惩罚
+#         consider_footprint: false #用圆形近似，omni机器人更高效
+#         collision_cost: 10000.0
+#         collision_margin_distance: 0.2 #碰撞边界余量
+#         near_goal_distance: 0.5
+
+#       CostCritic: #通过 costmap 梯度引导避障
+#         enabled: true
+#         cost_power: 1
+#         cost_weight: 3.8 #适当降低，配合修正后的 inflation 梯度
+#         critical_cost: 253.0 #关键修正！只有 inscribed/lethal 才触发碰撞惩罚，不再把整个膨胀区都当碰撞
+#         consider_footprint: true
+#         collision_cost: 1000000.0
+#         near_goal_distance: 0.5
+#         trajectory_point_step: 2
+
+#       PathFollowCritic: #必须开启，这是防止乱跑的核心
+#         enabled: true
+#         cost_power: 1
+#         cost_weight: 15.0
+#         offset_from_furthest: 5 #关注路径前方更远的点
+#         threshold_to_consider: 1.0 #放大关闭距离，让GoalCritic在近目标区域主导，防止画弧
+
+#       PathAlignCritic: #让轨迹方向与路径对齐，高速下更平滑
+#         enabled: true
+#         cost_power: 1
+#         cost_weight: 15.0
+#         max_path_occupancy_ratio: 0.05
+#         trajectory_point_step: 4
+#         threshold_to_consider: 0.8 #放大关闭距离，与PathFollowCritic同步，减少近目标干扰
+#         offset_from_furthest: 20
+#         use_path_orientations: false #omni机器人用运动方向而非朝向
+
+
 local_costmap:
   local_costmap:
     ros__parameters:
       use_sim_time: False
-      update_frequency: 10.0
-      publish_frequency: 5.0
+      update_frequency: 20.0
+      publish_frequency: 20.0
       global_frame: odom
       robot_base_frame: base_yaw_odom
       rolling_window: true
-      width: 5
-      height: 5
+      width: 10
+      height: 10
       resolution: 0.05
-      robot_radius: 0.2
-      footprint: "[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]"
+      robot_radius: 0.42
+      footprint: "[ [0.32, 0.32], [0.32, -0.32], [-0.32, -0.32], [-0.32, 0.32] ]"
       plugins: ["static_layer", "intensity_voxel_layer", "inflation_layer"]
       intensity_voxel_layer:
         plugin: pb_nav2_costmap_2d::IntensityVoxelLayer
@@ -490,11 +585,11 @@ local_costmap:
           # '<robot_namespace>' keyword shall be replaced with 'namespace' where user defined.
           # It doesn't need to start with '/'
           topic: <robot_namespace>/terrain_map
-          sensor_frame: front_mid360
+          sensor_frame: base_yaw
           min_obstacle_height: 0.0
           max_obstacle_height: 2.0
-          obstacle_max_range: 5.0
-          obstacle_min_range: 0.2
+          obstacle_max_range: 4.0
+          obstacle_min_range: 0.3
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -502,19 +597,22 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.7
+        inflation_radius: 0.55
       always_send_full_costmap: False
 
 global_costmap:
   global_costmap:
     ros__parameters:
       use_sim_time: False
-      update_frequency: 5.0
-      publish_frequency: 2.0
+      update_frequency: 20.0
+      publish_frequency: 20.0
+      width: 25
+      height: 25
       global_frame: map
       robot_base_frame: base_yaw_odom
-      robot_radius: 0.2
-      footprint: "[ [0.15, 0.15], [0.15, -0.15], [-0.15, -0.15], [-0.15, 0.15] ]"
+      rolling_window: true
+      robot_radius: 0.42
+      footprint: "[ [0.32, 0.32], [0.32, -0.32], [-0.32, -0.32], [-0.32, 0.32] ]"
       resolution: 0.04
       track_unknown_space: true
       plugins: ["static_layer", "intensity_voxel_layer", "inflation_layer"]
@@ -540,11 +638,11 @@ global_costmap:
           # '<robot_namespace>' keyword shall be replaced with 'namespace' where user defined.
           # It doesn't need to start with '/'
           topic: <robot_namespace>/terrain_map_ext
-          sensor_frame: front_mid360
+          sensor_frame: base_yaw
           min_obstacle_height: 0.0
           max_obstacle_height: 2.0
           obstacle_max_range: 10.0
-          obstacle_min_range: 0.2
+          obstacle_min_range: 0.3
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
@@ -651,8 +749,9 @@ behavior_server:
     rotational_acc_lim: 3.2
     # params for pb_nav2_behaviors/BackUpFreeSpace
     service_name: "global_costmap/get_costmap"
-    robot_radius: 0.2
+    robot_radius: 0.1
     max_radius: 3.5
+    free_threshold: 5
     visualize: True
 
 waypoint_follower:
@@ -673,8 +772,8 @@ velocity_smoother:
     scale_velocities: False
     feedback: "OPEN_LOOP"
     max_velocity: [2.5, 2.5, 3.0]
-    min_velocity: [-2.5, -2.5, -3.0]
-    max_accel: [2.5, 2.5, 3.0] #与 MPPI 加速度一致
+    min_velocity: [-2.5, -2.5, -2.5]
+    max_accel: [2.5, 2.5, 1.5] #与 MPPI 加速度一致
     max_decel: [-3.5, -3.5, -3.0] #与 MPPI 制动一致
     odom_topic: "odometry"
     odom_duration: 0.1
