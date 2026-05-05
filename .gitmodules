@@ -24,4 +24,4 @@
 	url = https://github.com/Yancey2023/small_point_lio.git
 [submodule "odin_ros_driver"]
 	path = odin_ros_driver
-	url = https://github.com/manifoldsdk/odin_ros_driver.git
+	url = git@github.com:Combat-Algorithm-Team/odin_ros_driver.git
