@@ -139,13 +139,6 @@ def generate_launch_description():
                 ],
                 arguments=["--ros-args", "--log-level", log_level],
             ),
-            Node(
-                condition=IfCondition(use_rviz),
-                package="rviz2",
-                executable="rviz2",
-                arguments=["-d", rviz_config_file],
-                output="screen",
-            ),
         ]
     )
 
