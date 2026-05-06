@@ -20,8 +20,17 @@ from launch.actions import DeclareLaunchArgument, GroupAction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, PushRosNamespace, SetRemap
 from launch_ros.descriptions import ParameterFile
-from launch_ros.parameter_descriptions import ParameterValue
 from nav2_common.launch import RewrittenYaml
+
+
+def get_libusb_env():
+    for libusb_path in [
+        "/usr/lib/aarch64-linux-gnu/libusb-1.0.so.0",
+        "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0",
+    ]:
+        if os.path.exists(libusb_path):
+            return {"LD_PRELOAD": libusb_path}
+    return {}
 
 
 def generate_launch_description():
@@ -31,7 +40,6 @@ def generate_launch_description():
     params_file = LaunchConfiguration("params_file")
     use_sim_time = LaunchConfiguration("use_sim_time")
     use_respawn = LaunchConfiguration("use_respawn")
-    publish_tf = LaunchConfiguration("publish_tf")
     log_level = LaunchConfiguration("log_level")
 
     configured_params = ParameterFile(
@@ -53,7 +61,7 @@ def generate_launch_description():
     declare_params_file_cmd = DeclareLaunchArgument(
         "params_file",
         default_value=os.path.join(
-            bringup_dir, "config", "reality", "nav2_params_mppi.yaml"
+            bringup_dir, "config", "reality", "nav2_params.yaml"
         ),
         description="Full path to the ROS 2 parameters file",
     )
@@ -68,12 +76,6 @@ def generate_launch_description():
         "use_respawn",
         default_value="False",
         description="Whether to respawn nodes if they crash",
-    )
-
-    declare_publish_tf_cmd = DeclareLaunchArgument(
-        "publish_tf",
-        default_value="False",
-        description="Whether small_point_lio publishes lidar odometry TF",
     )
 
     declare_log_level_cmd = DeclareLaunchArgument(
@@ -93,17 +95,15 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", log_level],
     )
 
-    start_small_point_lio_node = Node(
-        package="small_point_lio",
-        executable="small_point_lio_node",
-        name="small_point_lio",
+    start_point_lio_node = Node(
+        package="point_lio",
+        executable="pointlio_mapping",
+        name="point_lio",
         output="screen",
         respawn=use_respawn,
         respawn_delay=2.0,
-        parameters=[
-            configured_params,
-            {"publish_tf": ParameterValue(publish_tf, value_type=bool)},
-        ],
+        additional_env=get_libusb_env(),
+        parameters=[configured_params],
         arguments=["--ros-args", "--log-level", log_level],
     )
 
@@ -113,7 +113,7 @@ def generate_launch_description():
             SetRemap("/tf", "tf"),
             SetRemap("/tf_static", "tf_static"),
             start_livox_ros_driver2_node,
-            start_small_point_lio_node,
+            start_point_lio_node,
         ]
     )
 
@@ -123,7 +123,6 @@ def generate_launch_description():
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_use_respawn_cmd)
-    ld.add_action(declare_publish_tf_cmd)
     ld.add_action(declare_log_level_cmd)
 
     ld.add_action(bringup_group)
