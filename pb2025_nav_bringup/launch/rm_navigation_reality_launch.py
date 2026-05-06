@@ -57,7 +57,7 @@ def generate_launch_description():
 
     declare_slam_cmd = DeclareLaunchArgument(
         "slam",
-        default_value="False",
+        default_value="True",
         description="Whether run a SLAM. If True, it will disable small_gicp and send static tf (map->odom)",
     )
 
@@ -121,7 +121,7 @@ def generate_launch_description():
 
     declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
         "use_robot_state_pub",
-        default_value="False",
+        default_value="True",
         description="Whether to start the robot state publisher",
     )
 
