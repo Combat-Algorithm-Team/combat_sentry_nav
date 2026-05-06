@@ -21,7 +21,8 @@
 	url = https://github.com/SMBU-PolarBear-Robotics-Team/pointcloud_to_laserscan.git
 [submodule "small_point_lio"]
 	path = small_point_lio
-	url = https://github.com/Yancey2023/small_point_lio.git
+	url = https://github.com/Combat-Algorithm-Team/small_point_lio.git
+	branch = RM2026_COMBAT_sentry
 [submodule "odin_ros_driver"]
 	path = odin_ros_driver
 	url = https://github.com/Combat-Algorithm-Team/odin_ros_driver.git

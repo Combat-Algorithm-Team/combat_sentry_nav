@@ -16,6 +16,7 @@ small_point_lio:
     imu_topic: "livox/imu"                        # 对应 point_lio.common.imu_topic
     lidar_type: livox_custom_msg                  # 对应 point_lio.preprocess.lidar_type: 1
     lidar_frame: front_mid360                     # 与本 bringup 的 Livox frame_id 保持一致
+    lidar_odom_frame: lidar_odom                  # small_point_lio 输出的雷达里程计坐标系
     save_pcd: false                               # 对应 point_lio.pcd_save.pcd_save_en
 
     # 点云过滤
