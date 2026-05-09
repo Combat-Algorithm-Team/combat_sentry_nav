@@ -69,14 +69,14 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("output_frame", "front_mid360");
   this->declare_parameter<double>("time_offset_sec", 0.0);
   this->declare_parameter<double>("odom_cache_duration_sec", 2.0);
-  this->declare_parameter<double>("max_odom_gap_sec", 0.05);
-  this->declare_parameter<double>("max_extrapolation_sec", 0.01);
+  this->declare_parameter<double>("max_odom_gap_sec", 0.10);
+  this->declare_parameter<double>("max_extrapolation_sec", 0.05);
   this->declare_parameter<double>("tf_lookup_timeout_sec", 0.05);
 
   double time_offset_sec = 0.0;
   double odom_cache_duration_sec = 2.0;
-  double max_odom_gap_sec = 0.05;
-  double max_extrapolation_sec = 0.01;
+  double max_odom_gap_sec = 0.10;
+  double max_extrapolation_sec = 0.05;
 
   this->get_parameter("input_cloud_topic", input_cloud_topic_);
   this->get_parameter("output_cloud_topic", output_cloud_topic_);
@@ -101,11 +101,19 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
     input_cloud_topic_, rclcpp::SensorDataQoS(),
     std::bind(&PointCloudDeskewNode::pointCloudCallback, this, std::placeholders::_1));
+
+  auto odom_qos = rclcpp::QoS(rclcpp::KeepLast(200));
+  odom_qos.best_effort();
+  odom_qos.durability_volatile();
   odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-    odom_topic_, rclcpp::QoS(rclcpp::KeepLast(200)),
+    odom_topic_, odom_qos,
     std::bind(&PointCloudDeskewNode::odometryCallback, this, std::placeholders::_1));
+
+  auto output_qos = rclcpp::QoS(rclcpp::KeepLast(10));
+  output_qos.reliable();
+  output_qos.durability_volatile();
   cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-    output_cloud_topic_, rclcpp::SensorDataQoS());
+    output_cloud_topic_, output_qos);
 
   RCLCPP_INFO(
     this->get_logger(),

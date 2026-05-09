@@ -13,6 +13,6 @@ point_cloud_deskew:
     # All time parameters below use seconds.
     time_offset_sec: 0.0                 # LiDAR point timestamp offset.
     odom_cache_duration_sec: 2.0         # Odometry cache duration.
-    max_odom_gap_sec: 0.05               # Max gap between adjacent odometry samples.
-    max_extrapolation_sec: 0.01          # Max extrapolation outside the odometry cache.
+    max_odom_gap_sec: 0.10               # Max gap between adjacent odometry samples.
+    max_extrapolation_sec: 0.05          # Max extrapolation outside the odometry cache.
     tf_lookup_timeout_sec: 0.05          # TF lookup timeout.
