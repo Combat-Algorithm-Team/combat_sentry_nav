@@ -1,0 +1,96 @@
+# Static semantic terrain zones for RoboMaster sentry navigation.
+#
+# Frame convention:
+# - Coordinates are in the SLAM map frame.
+# - In slam:=True mode this relies on the sentry starting from the same pose each run.
+# - After each start, check /terrain_semantic_markers in RViz before trusting the zones.
+#
+# Zone types:
+# - high_cost: traversable but avoided by normal planning. Use for fortress/highland tops.
+# - slowdown: traversable and reported to the lower computer for speed limiting.
+# - lethal: obstacle. Use for the 43-degree highland slope and any no-go ramp face.
+#
+# state_id convention for /sentry_terrain_state:
+# - 0: normal
+# - 1: high_cost terrain such as fortress/highland
+# - 2: slowdown-only terrain
+# - 255: lethal / no-go terrain
+#
+# Replace the placeholder polygons with RViz-measured map coordinates.
+# Narrow high-cost lines can be written as:
+#   line: [[x0, y0], [x1, y1]]
+#   line_width: 0.25
+# Or multiple independent line strips can be written as:
+#   segments:
+#     - [[x0, y0], [x1, y1]]
+#     - [[x2, y2], [x3, y3]]
+frame_id: map
+
+zones:
+  - name: fortress_slope_intersection_lines
+    enabled: false
+    type: high_cost
+    cost: 225
+    state_id: 1
+    speed_limit: 0.45
+    priority: 75
+    line_width: 0.25
+    segments:
+      - [[0.0, 0.0], [1.0, 0.0]]
+      - [[0.0, 1.0], [1.0, 1.0]]
+      - [[0.0, 2.0], [1.0, 2.0]]
+      - [[0.0, 3.0], [1.0, 3.0]]
+      - [[0.0, 4.0], [1.0, 4.0]]
+      - [[0.0, 5.0], [1.0, 5.0]]
+
+  - name: left_highland_platform
+    enabled: false
+    type: high_cost
+    cost: 165
+    state_id: 1
+    speed_limit: 0.70
+    priority: 50
+    polygon:
+      - [0.0, 0.0]
+      - [1.0, 0.0]
+      - [1.0, 1.0]
+      - [0.0, 1.0]
+
+  - name: right_supply_area_highland_path
+    enabled: false
+    type: high_cost
+    cost: 150
+    state_id: 1
+    speed_limit: 0.80
+    priority: 45
+    polygon:
+      - [0.0, 0.0]
+      - [1.0, 0.0]
+      - [1.0, 1.0]
+      - [0.0, 1.0]
+
+  - name: fortress_platform
+    enabled: false
+    type: high_cost
+    cost: 170
+    state_id: 1
+    speed_limit: 0.60
+    priority: 55
+    polygon:
+      - [0.0, 0.0]
+      - [1.0, 0.0]
+      - [1.0, 1.0]
+      - [0.0, 1.0]
+
+  - name: highland_43deg_slope
+    enabled: false
+    type: lethal
+    cost: 254
+    state_id: 255
+    speed_limit: 0.0
+    priority: 100
+    polygon:
+      - [0.0, 0.0]
+      - [1.0, 0.0]
+      - [1.0, 1.0]
+      - [0.0, 1.0]

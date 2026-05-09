@@ -39,6 +39,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
     use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
+    use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
 
     lifecycle_nodes = [
         "controller_server",
@@ -121,6 +122,12 @@ def generate_launch_description():
         description="Use atlas_localization_adapter instead of loam_interface and sensor_scan_generation",
     )
 
+    declare_use_terrain_zone_monitor_cmd = DeclareLaunchArgument(
+        "use_terrain_zone_monitor",
+        default_value="False",
+        description="Start terrain_zone_monitor for sentry semantic terrain state publishing",
+    )
+
     start_terrain_analysis_cmd = Node(
         package="terrain_analysis",
         executable="terrainAnalysis",
@@ -136,6 +143,18 @@ def generate_launch_description():
         package="terrain_analysis_ext",
         executable="terrainAnalysisExt",
         name="terrain_analysis_ext",
+        output="screen",
+        respawn=use_respawn,
+        respawn_delay=2.0,
+        arguments=["--ros-args", "--log-level", log_level],
+        parameters=[configured_params],
+    )
+
+    start_terrain_zone_monitor_cmd = Node(
+        condition=IfCondition(use_terrain_zone_monitor),
+        package="pb_nav2_plugins",
+        executable="terrain_zone_monitor",
+        name="terrain_zone_monitor",
         output="screen",
         respawn=use_respawn,
         respawn_delay=2.0,
@@ -419,9 +438,11 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_use_atlas_localization_adapter_cmd)
+    ld.add_action(declare_use_terrain_zone_monitor_cmd)
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_terrain_analysis_cmd)
     ld.add_action(start_terrain_analysis_ext_cmd)
+    ld.add_action(start_terrain_zone_monitor_cmd)
     ld.add_action(load_nodes)
     ld.add_action(load_default_localization_composable_nodes)
     ld.add_action(load_atlas_localization_composable_nodes)

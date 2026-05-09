@@ -51,6 +51,7 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
     use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
+    use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"use_sim_time": use_sim_time, "yaml_filename": map_yaml_file}
@@ -143,6 +144,12 @@ def generate_launch_description():
         description="Use atlas_localization_adapter for odometry and fused perception LiDAR clouds",
     )
 
+    declare_use_terrain_zone_monitor_cmd = DeclareLaunchArgument(
+        "use_terrain_zone_monitor",
+        default_value="False",
+        description="Start terrain_zone_monitor for sentry semantic terrain state publishing",
+    )
+
     # Specify the actions
     bringup_cmd_group = GroupAction(
         [
@@ -201,6 +208,7 @@ def generate_launch_description():
                     "use_respawn": use_respawn,
                     "container_name": "nav2_container",
                     "use_atlas_localization_adapter": use_atlas_localization_adapter,
+                    "use_terrain_zone_monitor": use_terrain_zone_monitor,
                 }.items(),
             ),
         ]
@@ -225,6 +233,7 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_use_atlas_localization_adapter_cmd)
+    ld.add_action(declare_use_terrain_zone_monitor_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(bringup_cmd_group)

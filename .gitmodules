@@ -20,7 +20,7 @@
 	branch = main
 [submodule "pb_nav2_plugins"]
 	path = pb_nav2_plugins
-	url = https://github.com/SMBU-PolarBear-Robotics-Team/pb_nav2_plugins.git
+	url = https://github.com/MuzJili/pb_nav2_plugins.git
 	branch = main
 [submodule "pointcloud_to_laserscan"]
 	path = pointcloud_to_laserscan

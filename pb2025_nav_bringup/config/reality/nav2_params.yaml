@@ -181,6 +181,23 @@ cmd_vel_transform:
     input_cmd_vel_topic: "cmd_vel_nav2_result"
     output_cmd_vel_topic: "cmd_vel"
 
+terrain_zone_monitor:
+  ros__parameters:
+    use_sim_time: False
+    zones_file: $(find-pkg-share pb2025_nav_bringup)/config/reality/terrain_semantic_zones.yaml
+    global_frame: map
+    robot_base_frame: base_yaw_odom
+    footprint_radius: 0.42
+    sample_count: 16
+    update_frequency: 20.0
+    marker_publish_frequency: 1.0
+    normal_state_id: 0
+    state_topic: /sentry_terrain_state
+    state_name_topic: /sentry_terrain_zone_name
+    speed_limit_topic: /sentry_terrain_speed_limit
+    marker_topic: /terrain_semantic_markers
+    publish_markers: true
+
 small_gicp_relocalization:
   ros__parameters:
     use_sim_time: False
@@ -415,7 +432,13 @@ local_costmap:
       height: 5
       resolution: 0.05
       robot_radius: 0.2
-      plugins: ["static_layer", "intensity_voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "terrain_semantic_layer", "intensity_voxel_layer", "inflation_layer"]
+      terrain_semantic_layer:
+        plugin: pb_nav2_costmap_2d::SemanticPolygonLayer
+        enabled: true
+        zones_file: $(find-pkg-share pb2025_nav_bringup)/config/reality/terrain_semantic_zones.yaml
+        use_maximum: true
+        update_full_map: true
       intensity_voxel_layer:
         plugin: pb_nav2_costmap_2d::IntensityVoxelLayer
         enabled: true
@@ -463,7 +486,13 @@ global_costmap:
       robot_radius: 0.2
       resolution: 0.05
       track_unknown_space: true
-      plugins: ["static_layer", "intensity_voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "terrain_semantic_layer", "intensity_voxel_layer", "inflation_layer"]
+      terrain_semantic_layer:
+        plugin: pb_nav2_costmap_2d::SemanticPolygonLayer
+        enabled: true
+        zones_file: $(find-pkg-share pb2025_nav_bringup)/config/reality/terrain_semantic_zones.yaml
+        use_maximum: true
+        update_full_map: true
       intensity_voxel_layer:
         plugin: pb_nav2_costmap_2d::IntensityVoxelLayer
         enabled: true

@@ -47,6 +47,7 @@ def generate_launch_description():
     use_rviz = LaunchConfiguration("use_rviz")
     robot_name = LaunchConfiguration("robot_name")
     use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
+    use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -147,6 +148,12 @@ def generate_launch_description():
         description="Use atlas_localization_adapter for odometry and fused perception LiDAR clouds",
     )
 
+    declare_use_terrain_zone_monitor_cmd = DeclareLaunchArgument(
+        "use_terrain_zone_monitor",
+        default_value="True",
+        description="Start terrain_zone_monitor for sentry semantic terrain state publishing",
+    )
+
     # Create our own temporary YAML files that include substitutions
 
     configured_params = ParameterFile(
@@ -204,6 +211,7 @@ def generate_launch_description():
             "use_composition": use_composition,
             "use_respawn": use_respawn,
             "use_atlas_localization_adapter": use_atlas_localization_adapter,
+            "use_terrain_zone_monitor": use_terrain_zone_monitor,
         }.items(),
     )
 
@@ -225,6 +233,7 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_use_atlas_localization_adapter_cmd)
+    ld.add_action(declare_use_terrain_zone_monitor_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
