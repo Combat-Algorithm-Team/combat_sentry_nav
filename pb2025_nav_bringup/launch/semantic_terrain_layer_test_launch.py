@@ -147,20 +147,6 @@ def generate_launch_description():
         ],
     )
 
-    costmap_markers_cmd = Node(
-        package="nav2_costmap_2d",
-        executable="nav2_costmap_2d_markers",
-        name="semantic_terrain_test_costmap_markers",
-        output="screen",
-        arguments=[
-            "costmap/costmap_raw",
-            "semantic_terrain_test_costmap_markers",
-            "--ros-args",
-            "--log-level",
-            log_level,
-        ],
-    )
-
     terrain_zone_monitor_cmd = Node(
         condition=IfCondition(use_zone_monitor),
         package="pb_nav2_plugins",
@@ -184,6 +170,5 @@ def generate_launch_description():
     ld.add_action(standalone_costmap_cmd)
     ld.add_action(configure_costmap_cmd)
     ld.add_action(activate_costmap_cmd)
-    ld.add_action(costmap_markers_cmd)
     ld.add_action(terrain_zone_monitor_cmd)
     return ld
