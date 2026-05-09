@@ -18,9 +18,9 @@
 	path = pb_teleop_twist_joy
 	url = https://github.com/SMBU-PolarBear-Robotics-Team/pb_teleop_twist_joy.git
 	branch = main
-[submodule "pb_nav2_plugins"]
-	path = pb_nav2_plugins
-	url = https://github.com/MuzJili/pb_nav2_plugins.git
+[submodule "combat_nav2_plugins"]
+	path = combat_nav2_plugins
+	url = https://github.com/Combat-Algorithm-Team/combat_nav2_plugins.git
 	branch = main
 [submodule "pointcloud_to_laserscan"]
 	path = pointcloud_to_laserscan

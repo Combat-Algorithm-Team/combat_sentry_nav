@@ -152,7 +152,7 @@ def generate_launch_description():
 
     start_terrain_zone_monitor_cmd = Node(
         condition=IfCondition(use_terrain_zone_monitor),
-        package="pb_nav2_plugins",
+        package="combat_nav2_plugins",
         executable="terrain_zone_monitor",
         name="terrain_zone_monitor",
         output="screen",

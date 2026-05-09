@@ -1,4 +1,4 @@
-# Standalone costmap test parameters for pb_nav2_costmap_2d::SemanticPolygonLayer.
+# Standalone costmap test parameters for combat_nav2_costmap_2d::SemanticPolygonLayer.
 # This file is only for visualization/debugging and does not start the real
 # sentry navigation stack.
 
@@ -20,7 +20,7 @@ costmap:
       track_unknown_space: false
       plugins: ["terrain_semantic_layer"]
       terrain_semantic_layer:
-        plugin: pb_nav2_costmap_2d::SemanticPolygonLayer
+        plugin: combat_nav2_costmap_2d::SemanticPolygonLayer
         enabled: true
         zones_file: $(var zones_file)
         use_maximum: true

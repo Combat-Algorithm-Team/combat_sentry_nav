@@ -127,10 +127,17 @@ def generate_launch_description():
 
     configure_costmap_cmd = TimerAction(
         condition=IfCondition(autostart),
-        period=1.0,
+        period=2.0,
         actions=[
             ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/costmap/costmap", "configure"],
+                cmd=[
+                    "ros2",
+                    "service",
+                    "call",
+                    "/costmap/costmap/change_state",
+                    "lifecycle_msgs/srv/ChangeState",
+                    "{transition: {id: 1}}",
+                ],
                 output="screen",
             )
         ],
@@ -138,10 +145,17 @@ def generate_launch_description():
 
     activate_costmap_cmd = TimerAction(
         condition=IfCondition(autostart),
-        period=2.0,
+        period=4.0,
         actions=[
             ExecuteProcess(
-                cmd=["ros2", "lifecycle", "set", "/costmap/costmap", "activate"],
+                cmd=[
+                    "ros2",
+                    "service",
+                    "call",
+                    "/costmap/costmap/change_state",
+                    "lifecycle_msgs/srv/ChangeState",
+                    "{transition: {id: 3}}",
+                ],
                 output="screen",
             )
         ],
@@ -149,7 +163,7 @@ def generate_launch_description():
 
     terrain_zone_monitor_cmd = Node(
         condition=IfCondition(use_zone_monitor),
-        package="pb_nav2_plugins",
+        package="combat_nav2_plugins",
         executable="terrain_zone_monitor",
         name="terrain_zone_monitor",
         output="screen",
