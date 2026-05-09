@@ -16,7 +16,7 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable, TimerAction
 from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -125,13 +125,40 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", log_level],
     )
 
-    lifecycle_manager_cmd = Node(
-        package="nav2_lifecycle_manager",
-        executable="lifecycle_manager",
-        name="terrain_semantic_costmap_lifecycle_manager",
+    configure_costmap_cmd = TimerAction(
+        condition=IfCondition(autostart),
+        period=1.0,
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/costmap/costmap", "configure"],
+                output="screen",
+            )
+        ],
+    )
+
+    activate_costmap_cmd = TimerAction(
+        condition=IfCondition(autostart),
+        period=2.0,
+        actions=[
+            ExecuteProcess(
+                cmd=["ros2", "lifecycle", "set", "/costmap/costmap", "activate"],
+                output="screen",
+            )
+        ],
+    )
+
+    costmap_markers_cmd = Node(
+        package="nav2_costmap_2d",
+        executable="nav2_costmap_2d_markers",
+        name="semantic_terrain_test_costmap_markers",
         output="screen",
-        parameters=[configured_params],
-        arguments=["--ros-args", "--log-level", log_level],
+        arguments=[
+            "costmap/costmap_raw",
+            "semantic_terrain_test_costmap_markers",
+            "--ros-args",
+            "--log-level",
+            log_level,
+        ],
     )
 
     terrain_zone_monitor_cmd = Node(
@@ -155,6 +182,8 @@ def generate_launch_description():
     ld.add_action(declare_log_level_cmd)
     ld.add_action(static_tf_cmd)
     ld.add_action(standalone_costmap_cmd)
-    ld.add_action(lifecycle_manager_cmd)
+    ld.add_action(configure_costmap_cmd)
+    ld.add_action(activate_costmap_cmd)
+    ld.add_action(costmap_markers_cmd)
     ld.add_action(terrain_zone_monitor_cmd)
     return ld

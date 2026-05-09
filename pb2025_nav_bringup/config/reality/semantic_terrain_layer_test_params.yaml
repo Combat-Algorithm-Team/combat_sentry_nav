@@ -43,9 +43,3 @@ terrain_zone_monitor:
     speed_limit_topic: /sentry_terrain_speed_limit
     marker_topic: /terrain_semantic_markers
     publish_markers: true
-
-terrain_semantic_costmap_lifecycle_manager:
-  ros__parameters:
-    use_sim_time: False
-    autostart: true
-    node_names: ["costmap/costmap"]
