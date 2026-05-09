@@ -72,12 +72,12 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<double>("max_odom_gap_sec", 0.05);
   this->declare_parameter<double>("max_extrapolation_sec", 0.01);
   this->declare_parameter<double>("tf_lookup_timeout_sec", 0.05);
-  this->declare_parameter<bool>("use_sim_time", false);
 
   double time_offset_sec = 0.0;
   double odom_cache_duration_sec = 2.0;
   double max_odom_gap_sec = 0.05;
   double max_extrapolation_sec = 0.01;
+
   this->get_parameter("input_cloud_topic", input_cloud_topic_);
   this->get_parameter("output_cloud_topic", output_cloud_topic_);
   this->get_parameter("odom_topic", odom_topic_);
@@ -138,18 +138,13 @@ void PointCloudDeskewNode::odometryCallback(const nav_msgs::msg::Odometry::Const
     tf2::Vector3(msg->pose.pose.position.x, msg->pose.pose.position.y, msg->pose.pose.position.z));
   sample.odom_to_base.setRotation(orientation);
 
-  if (odom_cache_.empty() || stamp_ns > odom_cache_.back().stamp_ns) {
-    odom_cache_.push_back(sample);
-  } else {
-    auto insert_it = std::lower_bound(
-      odom_cache_.begin(), odom_cache_.end(), stamp_ns,
-      [](const PoseSample & pose, int64_t stamp) { return pose.stamp_ns < stamp; });
-    if (insert_it != odom_cache_.end() && insert_it->stamp_ns == stamp_ns) {
-      *insert_it = sample;
-    } else {
-      odom_cache_.insert(insert_it, sample);
-    }
+  if (!odom_cache_.empty() && stamp_ns <= odom_cache_.back().stamp_ns) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Ignoring non-increasing odometry timestamp.");
+    return;
   }
+  odom_cache_.push_back(sample);
 
   const int64_t keep_after_ns = odom_cache_.back().stamp_ns - odom_cache_duration_ns_;
   while (!odom_cache_.empty() && odom_cache_.front().stamp_ns < keep_after_ns) {
@@ -185,7 +180,17 @@ bool PointCloudDeskewNode::deskewCloud(
     return true;
   }
 
-  const int64_t target_stamp_ns = readPointTimeNs(pointData(input, point_count - 1U));
+  int64_t target_stamp_ns = std::numeric_limits<int64_t>::min();
+  for (std::size_t i = 0; i < point_count; ++i) {
+    target_stamp_ns = std::max(target_stamp_ns, readPointTimeNs(pointData(input, i)));
+  }
+  if (target_stamp_ns <= 0) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Drop cloud: no valid point timestamp was found.");
+    return false;
+  }
+
   tf2::Transform target_odom_to_base;
   std::size_t target_cursor = 1U;
   if (!interpolatePose(target_stamp_ns, target_cursor, target_odom_to_base)) {
