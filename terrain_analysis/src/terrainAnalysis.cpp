@@ -443,7 +443,7 @@ int main(int argc, char ** argv)
 
             float dis1 = sqrt(pointX1 * pointX1 + pointY1 * pointY1);
             if (dis1 > minDyObsDis) {
-              float angle1 = atan2(pointZ1 - minDyObsRelZ, dis1) * 180.0 / M_PI;
+              float angle1 = atan2(pointZ1 - minDyObsRelZ, dis1) * 180.0 / M_PI;  // 相当于将里程计的 z 加上 minDyObsRelZ 然后判断 点到（z+minDyObsRelZ)的tan角度
               if (angle1 > minDyObsAngle) {
                 float pointX2 = pointX1 * cosVehicleYaw + pointY1 * sinVehicleYaw;
                 float pointY2 = -pointX1 * sinVehicleYaw + pointY1 * cosVehicleYaw;
