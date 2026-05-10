@@ -22,17 +22,20 @@ from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, PushRosNamespace, SetRemap
 from launch_ros.descriptions import ParameterFile
+from launch_ros.parameter_descriptions import ParameterValue
 from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
     bringup_dir = get_package_share_directory("pb2025_nav_bringup")
-    deskew_dir = get_package_share_directory("point_cloud_deskew")
+    fusion_dir = get_package_share_directory("sentry_fusion")
 
     namespace = LaunchConfiguration("namespace")
     params_file = LaunchConfiguration("params_file")
     livox_params_file = LaunchConfiguration("livox_params_file")
     launch_livox = LaunchConfiguration("launch_livox")
+    use_point_cloud_fusion = LaunchConfiguration("use_point_cloud_fusion")
+    use_odom_adapter = LaunchConfiguration("use_odom_adapter")
     launch_robot_state_publisher = LaunchConfiguration("launch_robot_state_publisher")
     use_sim_time = LaunchConfiguration("use_sim_time")
     use_respawn = LaunchConfiguration("use_respawn")
@@ -70,10 +73,25 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", log_level],
     )
 
-    start_point_cloud_deskew_node = Node(
-        package="point_cloud_deskew",
-        executable="point_cloud_deskew_node",
+    start_sentry_fusion_node = Node(
+        package="sentry_fusion",
+        executable="sentry_fusion_node",
         name="point_cloud_deskew",
+        output="screen",
+        respawn=use_respawn,
+        respawn_delay=2.0,
+        parameters=[
+            configured_params,
+            {"enable_fusion": ParameterValue(use_point_cloud_fusion, value_type=bool)},
+        ],
+        arguments=["--ros-args", "--log-level", log_level],
+    )
+
+    start_odom_adapter_node = Node(
+        condition=IfCondition(use_odom_adapter),
+        package="sentry_fusion",
+        executable="odom_adapter_node",
+        name="odom_adapter",
         output="screen",
         respawn=use_respawn,
         respawn_delay=2.0,
@@ -87,7 +105,8 @@ def generate_launch_description():
             SetRemap("/tf", "tf"),
             SetRemap("/tf_static", "tf_static"),
             start_livox_ros_driver2_node,
-            start_point_cloud_deskew_node,
+            start_sentry_fusion_node,
+            start_odom_adapter_node,
         ]
     )
 
@@ -115,7 +134,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "params_file",
                 default_value=os.path.join(
-                    deskew_dir, "config", "point_cloud_deskew.yaml"
+                    fusion_dir, "config", "sentry_fusion.yaml"
                 ),
                 description="Full path to the point cloud deskew parameter file",
             ),
@@ -130,6 +149,16 @@ def generate_launch_description():
                 "launch_livox",
                 default_value="True",
                 description="Whether to launch livox_ros_driver2 together with point cloud deskew",
+            ),
+            DeclareLaunchArgument(
+                "use_point_cloud_fusion",
+                default_value="True",
+                description="Fuse the deskewed Livox cloud with the Odin cloud",
+            ),
+            DeclareLaunchArgument(
+                "use_odom_adapter",
+                default_value="True",
+                description="Convert Odin odometry into navigation odometry outputs",
             ),
             DeclareLaunchArgument(
                 "launch_robot_state_publisher",

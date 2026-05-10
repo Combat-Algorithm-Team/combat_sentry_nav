@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(point_cloud_deskew)
+project(sentry_fusion)
 
 ## Use C++14
 set(CMAKE_CXX_STANDARD 14)
@@ -28,8 +28,13 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN point_cloud_deskew::PointCloudDeskewNode
+  PLUGIN sentry_fusion::PointCloudDeskewNode
   EXECUTABLE ${PROJECT_NAME}_node
+)
+
+rclcpp_components_register_node(${PROJECT_NAME}
+  PLUGIN sentry_fusion::OdomAdapterNode
+  EXECUTABLE odom_adapter_node
 )
 
 #############

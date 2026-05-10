@@ -26,7 +26,7 @@
   <exec_depend>combat_nav2_plugins</exec_depend>
   <exec_depend>pb_teleop_twist_joy</exec_depend>
   <exec_depend>body_point_cloud_filter</exec_depend>
-  <exec_depend>point_cloud_deskew</exec_depend>
+  <exec_depend>sentry_fusion</exec_depend>
   <exec_depend>atlas_localization_adapter</exec_depend>
   <exec_depend>livox_ros_driver2</exec_depend>
   <exec_depend>point_lio</exec_depend>
