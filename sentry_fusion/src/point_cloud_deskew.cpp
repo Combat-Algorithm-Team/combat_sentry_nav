@@ -148,8 +148,11 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
     odin_cloud_sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
       odin_cloud_topic_, rclcpp::SensorDataQoS(),
       std::bind(&PointCloudDeskewNode::odinCloudCallback, this, std::placeholders::_1));
+    auto fused_qos = rclcpp::QoS(rclcpp::KeepLast(10));
+    fused_qos.reliable();
+    fused_qos.durability_volatile();
     fused_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      fused_cloud_topic_, rclcpp::SensorDataQoS());
+      fused_cloud_topic_, fused_qos);
   }
 
   if (publish_deskewed_cloud_ || !enable_fusion_) {
