@@ -36,7 +36,6 @@ OdomAdapterNode::OdomAdapterNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("robot_base_odom_frame", "base_yaw_odom");
   this->declare_parameter<std::string>("lidar_frame", "odin1_base_link");
   this->declare_parameter<double>("tf_lookup_timeout_sec", 0.05);
-  this->declare_parameter<bool>("use_sim_time", false);
 
   this->get_parameter("input_odometry_topic", input_odometry_topic_);
   this->get_parameter("lidar_odometry_topic", lidar_odometry_topic_);
