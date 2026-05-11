@@ -28,6 +28,7 @@
   <exec_depend>body_point_cloud_filter</exec_depend>
   <exec_depend>sentry_fusion</exec_depend>
   <exec_depend>atlas_localization_adapter</exec_depend>
+  <exec_depend>odin_ros_driver</exec_depend>
   <exec_depend>livox_ros_driver2</exec_depend>
   <exec_depend>point_lio</exec_depend>
   <exec_depend>small_point_lio</exec_depend>
