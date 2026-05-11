@@ -48,6 +48,7 @@ double terrainUnderVehicle = -0.75;
 double terrainConnThre = 0.5;
 double ceilingFilteringThre = 2.0;
 double localTerrainMapRadius = 4.0;
+double bodyFilteringRadius = 0.0;
 
 // terrain voxel parameters
 float terrainVoxelSize = 2.0;
@@ -136,6 +137,9 @@ void laserCloudHandler(
 
     float dis = sqrt((pointX - vehicleX) * (pointX - vehicleX) +
                      (pointY - vehicleY) * (pointY - vehicleY));
+    if (bodyFilteringRadius > 0.0 && dis <= bodyFilteringRadius) {
+      continue;
+    }
     if (pointZ - vehicleZ > lowerBoundZ - disRatioZ * dis &&
         pointZ - vehicleZ < upperBoundZ + disRatioZ * dis &&
         dis < terrainVoxelSize * (terrainVoxelHalfWidth + 1)) {
@@ -191,6 +195,7 @@ int main(int argc, char **argv) {
   nh->declare_parameter<double>("terrainConnThre", terrainConnThre);
   nh->declare_parameter<double>("ceilingFilteringThre", ceilingFilteringThre);
   nh->declare_parameter<double>("localTerrainMapRadius", localTerrainMapRadius);
+  nh->declare_parameter<double>("bodyFilteringRadius", bodyFilteringRadius);
 
   nh->get_parameter("scanVoxelSize", scanVoxelSize);
   nh->get_parameter("decayTime", decayTime);
@@ -209,6 +214,7 @@ int main(int argc, char **argv) {
   nh->get_parameter("terrainConnThre", terrainConnThre);
   nh->get_parameter("ceilingFilteringThre", ceilingFilteringThre);
   nh->get_parameter("localTerrainMapRadius", localTerrainMapRadius);
+  nh->get_parameter("bodyFilteringRadius", bodyFilteringRadius);
 
   auto subOdometry = nh->create_subscription<nav_msgs::msg::Odometry>(
       "odometry", 5, odometryHandler);
