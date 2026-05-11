@@ -22,7 +22,7 @@ This project is based on the [NAV2 Navigation Framework](https://github.com/ros-
 
     This project has optimized coordinate transformation logic significantly, considering the implicit transformation between the radar origin `lidar_odom` and the chassis origin `odom`.
 
-    The Livox mid360 is mounted at an incline on the chassis and uses the [point_lio](https://github.com/SMBU-PolarBear-Robotics-Team/point_lio/tree/RM2025_SMBU_auto_sentry) as odometry, [small_gicp](https://github.com/SMBU-PolarBear-Robotics-Team/small_gicp_relocalization) for localization, and [loam_interface](./loam_interface/) will transform PointCloud from `lidar_odom` frame to `odom` frame. The [sensor_scan_generation](./sensor_scan_generation/) transform PointCloud from `odom` frame to `front_mid360` frame and publishes the transform `odom -> chassis`.
+    The current physical-robot pipeline uses [odin_ros_driver](./odin_ros_driver/) and [livox_ros_driver2](./livox_ros_driver2/) for point cloud and odometry input. [sentry_fusion](./sentry_fusion/) deskews the Livox cloud, fuses Odin/Livox point clouds, adapts odometry, and publishes `registered_scan`, `lidar_odometry`, and `odometry`. `terrain_analysis` / `terrain_analysis_ext` consume `registered_scan` and generate `terrain_map` / `terrain_map_ext` for Nav2 costmaps and SLAM.
 
     ![frames_2025_03_26](https://raw.githubusercontent.com/LihanChen2004/picx-images-hosting/master/frames_2025_03_26.67xmq3djvx.webp)
 
@@ -38,24 +38,23 @@ This project is based on the [NAV2 Navigation Framework](https://github.com/ros-
 
     The Livox mid360 is mounted at an incline on the chassis.
 
-    Note: In the simulation environment, the point cloud pattern is actually of the Velodyne-style mechanical scan. Additionally, the simulator's output point cloud lacks some fields, preventing point_lio from estimating the state correctly. Thus, the simulator’s output point cloud is processed by [ign_sim_pointcloud_tool](./ign_sim_pointcloud_tool/) to add the `time` field.
+    The main launch path currently targets the Odin1 + Livox MID-360 stack. The old Point-LIO/simulation point-cloud conversion path has been removed from this repository.
 
 - File Structure
 
     ```txt
     .
-    ├── fake_vel_transform                  # Virtual velocity reference frame to handle gimbal scanning mode, see sub-repository README
-    ├── ign_sim_pointcloud_tool             # Simulator point cloud processing tool
+    ├── cmd_vel_transform                   # Nav2 output velocity transform
+    ├── combat_nav2_plugins                 # Custom Nav2 plugins
+    ├── goal_approach_controller            # Goal approach controller
     ├── livox_ros_driver2                   # Livox driver
-    ├── loam_interface                      # Point_lio and other odometry interfaces
-    ├── pb_teleop_twist_joy                 # Gamepad control
+    ├── odin_ros_driver                     # Odin1 driver and point-cloud output
     ├── pb2025_nav_bringup                  # Launch files
-    ├── pb2025_sentry_nav                   # This repository's package description
     ├── pb_omni_pid_pursuit_controller      # Path tracking controller
-    ├── point_lio                           # Odometry
     ├── pointcloud_to_laserscan             # Convert terrain_map to LaserScan type to represent obstacles (only launched in SLAM mode)
-    ├── sensor_scan_generation              # Point cloud related coordinate transformation
+    ├── sentry_fusion                       # Point cloud deskew, fusion, and odometry adaptation
     ├── small_gicp_relocalization           # Localization
+    ├── small_point_lio                     # Lightweight point-cloud odometry experimental package
     ├── terrain_analysis                    # Terrain analysis within a 4m range of the vehicle, writing obstacle height above ground into the PointCloud intensity field.
     └── terrain_analysis_ext                # Terrain analysis beyond a 4m range of the vehicle, writing obstacle height above ground into the PointCloud intensity field.
     ```
@@ -117,9 +116,7 @@ git clone --recursive https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_sen
 
 Download prior point cloud:
 
-Prior point clouds are used for point_lio and small_gicp. Due to large file size, they are not stored in Git. Please download them from [FlowUs](https://flowus.cn/lihanchen/share/87f81771-fc0c-4e09-a768-db01f4c136f4?code=4PP1RS).
-
-> Note: The performance of point_lio with prior_pcd in large scenes is not optimal, and it is more prone to drift than without prior point clouds. Debugging and optimization are ongoing.
+Prior point clouds are mainly used by small_gicp localization. Due to large file size, they are not stored in Git. Please download them from [FlowUs](https://flowus.cn/lihanchen/share/87f81771-fc0c-4e09-a768-db01f4c136f4?code=4PP1RS).
 
 #### 2.2.3 Build
 
@@ -138,43 +135,7 @@ colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 You can start the project with the following commands. Use the `Nav2 Goal` plugin in RViz to publish goal pose.
 
-#### 2.3.1 Simulation
-
-Single Robot:
-
-Navigation mode：
-
-```bash
-ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
-world:=rmuc_2025 \
-slam:=False
-```
-
-SLAM mode：
-
-```bash
-ros2 launch pb2025_nav_bringup rm_navigation_simulation_launch.py \
-slam:=True
-```
-
-Save map：`ros2 run nav2_map_server map_saver_cli -f <YOUR_MAP_NAME>  --ros-args -r __ns:=/red_standard_robot1`
-
-Navigation mode:
-
-Multi Robots (Experimental) :
-
-The specified initial pose is currently invalid. TODO: Add transform and initialization for `map` -> `odom`.
-
-```bash
-ros2 launch pb2025_nav_bringup rm_multi_navigation_simulation_launch.py \
-world:=rmul_2024 \
-robots:=" \
-red_standard_robot1={x: 0.0, y: 0.0, yaw: 0.0}; \
-blue_standard_robot1={x: 5.6, y: 1.4, yaw: 3.14}; \
-"
-```
-
-#### 2.3.2 Physical Robot
+#### 2.3.1 Physical Robot
 
 SLAM mode：
 
@@ -210,7 +171,7 @@ Launch arguments are largely common to both simulation and physical robot. Howev
 |-|-|-|-|-|
 | 🤖 🖥️ | `namespace` | Top-level namespace | string | "red_standard_robot1" |
 | 🤖🖥️ | `use_sim_time` | Use simulation (Gazebo) clock if True | bool | Simulation: True; Reality: False |
-| 🤖 🖥️ | `slam` | Whether run a SLAM. If True, it will disable small_gicp and send static tf (map->odom). Then automatically save the pcd_file in [./point_lio/PCD/](./point_lio/PCD/)| bool | False |
+| 🤖 🖥️ | `slam` | Whether to run SLAM. If True, it disables small_gicp and sends a static map->odom TF | bool | False |
 | 🤖 🖥️ | `world` | In simulation, available options are `rmul_2024` or `rmuc_2024` or `rmul_2025` or `rmuc_2025` | string | "rmuc_2025" |
 |  |  | In reality, the `world` parameter name is the same as the file names of the grid map and prior pointcloud map | string | "" |
 | 🤖 🖥️ | `map` | Full path to map file to load. The path is constructed based on the `world` parameter | string | Simulation: [rmuc_2025.yaml](./pb2025_nav_bringup/map/simulation/rmuc_2025.yaml); Reality: AUTO_FILL |
@@ -225,9 +186,3 @@ Launch arguments are largely common to both simulation and physical robot. Howev
 
 > [!TIP]
 > For more details about this project and the deployment guide for the physical robot, please visit the [Wiki](https://github.com/SMBU-PolarBear-Robotics-Team/pb2025_sentry_nav/wiki).
-
-### 2.5 Joy teleop
-
-By default, PS4 controller support is enabled. The key mapping can be found in the `teleop_twist_joy_node` section of [nav2_params.yaml](./pb2025_nav_bringup/config/simulation/nav2_params.yaml).
-
-![teleop_twist_joy.gif](https://raw.githubusercontent.com/LihanChen2004/picx-images-hosting/master/teleop_twist_joy.5j4aav3v3p.gif)
