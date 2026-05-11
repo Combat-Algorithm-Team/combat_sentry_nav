@@ -332,8 +332,8 @@ controller_server:
       approach_velocity: 0.8
       direct_approach_distance: 2.0  #进入直接驱动模式的距离，绕过MPPI防止画弧
       direct_approach_kp: 3.0  #直接驱动P控制增益
-      time_steps: 80  #增加到80，预测时域4.8s，让MPPI能看到冲过目标的后果
-      model_dt: 0.02  #稍微放大步长，配合time_steps延长预测时域
+      time_steps: 80  #预测时域2.0s，让MPPI能看到冲过目标的后果
+      model_dt: 0.025  #匹配40Hz controller_frequency，避免MPPI配置阶段因控制周期大于模型步长而失败
       batch_size: 1500 #控制器的采样数。
 
       vx_std: 0.3 #增大采样多样性，让MPPI能采到更多减速/停止轨迹
