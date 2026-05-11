@@ -43,14 +43,11 @@ def generate_launch_description():
     namespace = LaunchConfiguration("namespace")
     slam = LaunchConfiguration("slam")
     map_yaml_file = LaunchConfiguration("map")
-    prior_pcd_file = LaunchConfiguration("prior_pcd_file")
     use_sim_time = LaunchConfiguration("use_sim_time")
     params_file = LaunchConfiguration("params_file")
     autostart = LaunchConfiguration("autostart")
-    use_composition = LaunchConfiguration("use_composition")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
-    use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
     use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
 
     # Create our own temporary YAML files that include substitutions
@@ -100,10 +97,6 @@ def generate_launch_description():
         "map", description="Full path to map yaml file to load"
     )
 
-    declare_prior_pcd_file_cmd = DeclareLaunchArgument(
-        "prior_pcd_file", description="Full path to prior PCD file to load"
-    )
-
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         "use_sim_time",
         default_value="false",
@@ -122,26 +115,14 @@ def generate_launch_description():
         description="Automatically startup the nav2 stack",
     )
 
-    declare_use_composition_cmd = DeclareLaunchArgument(
-        "use_composition",
-        default_value="True",
-        description="Whether to use composed bringup",
-    )
-
     declare_use_respawn_cmd = DeclareLaunchArgument(
         "use_respawn",
         default_value="False",
-        description="Whether to respawn if a node crashes. Applied when composition is disabled.",
+        description="Whether to respawn standalone helper nodes if they crash",
     )
 
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level", default_value="info", description="log level"
-    )
-
-    declare_use_atlas_localization_adapter_cmd = DeclareLaunchArgument(
-        "use_atlas_localization_adapter",
-        default_value="False",
-        description="Use atlas_localization_adapter for odometry and fused perception LiDAR clouds",
     )
 
     declare_use_terrain_zone_monitor_cmd = DeclareLaunchArgument(
@@ -157,11 +138,10 @@ def generate_launch_description():
             SetRemap("/tf", "tf"),
             SetRemap("/tf_static", "tf_static"),
             Node(
-                condition=IfCondition(use_composition),
                 name="nav2_container",
                 package="rclcpp_components",
                 executable="component_container_isolated",
-                parameters=[configured_params, {"autostart": autostart}],
+                parameters=[configured_params],
                 arguments=["--ros-args", "--log-level", log_level],
                 output="screen",
             ),
@@ -176,6 +156,7 @@ def generate_launch_description():
                     "autostart": autostart,
                     "use_respawn": use_respawn,
                     "params_file": params_file,
+                    "log_level": log_level,
                 }.items(),
             ),
             IncludeLaunchDescription(
@@ -189,10 +170,8 @@ def generate_launch_description():
                     "use_sim_time": use_sim_time,
                     "autostart": autostart,
                     "params_file": params_file,
-                    "prior_pcd_file": prior_pcd_file,
-                    "use_composition": use_composition,
-                    "use_respawn": use_respawn,
                     "container_name": "nav2_container",
+                    "log_level": log_level,
                 }.items(),
             ),
             IncludeLaunchDescription(
@@ -204,10 +183,9 @@ def generate_launch_description():
                     "use_sim_time": use_sim_time,
                     "autostart": autostart,
                     "params_file": params_file,
-                    "use_composition": use_composition,
                     "use_respawn": use_respawn,
                     "container_name": "nav2_container",
-                    "use_atlas_localization_adapter": use_atlas_localization_adapter,
+                    "log_level": log_level,
                     "use_terrain_zone_monitor": use_terrain_zone_monitor,
                 }.items(),
             ),
@@ -225,14 +203,11 @@ def generate_launch_description():
     ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_slam_cmd)
     ld.add_action(declare_map_yaml_cmd)
-    ld.add_action(declare_prior_pcd_file_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
-    ld.add_action(declare_use_atlas_localization_adapter_cmd)
     ld.add_action(declare_use_terrain_zone_monitor_cmd)
 
     # Add the actions to launch all of the navigation nodes

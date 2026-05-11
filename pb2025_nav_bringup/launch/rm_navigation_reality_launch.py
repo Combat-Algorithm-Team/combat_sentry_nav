@@ -17,13 +17,23 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, GroupAction, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, TextSubstitution
-from launch_ros.actions import Node
+from launch_ros.actions import Node, PushRosNamespace, SetRemap
 from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml
+
+
+def get_libusb_env():
+    for libusb_path in [
+        "/usr/lib/aarch64-linux-gnu/libusb-1.0.so.0",
+        "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0",
+    ]:
+        if os.path.exists(libusb_path):
+            return {"LD_PRELOAD": libusb_path}
+    return {}
 
 
 def generate_launch_description():
@@ -36,17 +46,16 @@ def generate_launch_description():
     slam = LaunchConfiguration("slam")
     world = LaunchConfiguration("world")
     map_yaml_file = LaunchConfiguration("map")
-    prior_pcd_file = LaunchConfiguration("prior_pcd_file")
     use_sim_time = LaunchConfiguration("use_sim_time")
     params_file = LaunchConfiguration("params_file")
     autostart = LaunchConfiguration("autostart")
-    use_composition = LaunchConfiguration("use_composition")
     use_respawn = LaunchConfiguration("use_respawn")
     rviz_config_file = LaunchConfiguration("rviz_config_file")
     use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     use_rviz = LaunchConfiguration("use_rviz")
     robot_name = LaunchConfiguration("robot_name")
-    use_atlas_localization_adapter = LaunchConfiguration("use_atlas_localization_adapter")
+    launch_odin = LaunchConfiguration("launch_odin")
+    launch_livox = LaunchConfiguration("launch_livox")
     use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
 
     # Declare the launch arguments
@@ -59,7 +68,7 @@ def generate_launch_description():
     declare_slam_cmd = DeclareLaunchArgument(
         "slam",
         default_value="True",
-        description="Whether run a SLAM. If True, it will disable small_gicp and send static tf (map->odom)",
+        description="Whether to run SLAM with the Odin point cloud chain",
     )
 
     declare_world_cmd = DeclareLaunchArgument(
@@ -76,16 +85,6 @@ def generate_launch_description():
             TextSubstitution(text=".yaml"),
         ],
         description="Full path to map file to load",
-    )
-
-    declare_prior_pcd_file_cmd = DeclareLaunchArgument(
-        "prior_pcd_file",
-        default_value=[
-            TextSubstitution(text=os.path.join(bringup_dir, "pcd", "reality", "")),
-            world,
-            TextSubstitution(text=".pcd"),
-        ],
-        description="Full path to prior pcd file to load",
     )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -108,16 +107,10 @@ def generate_launch_description():
         description="Automatically startup the nav2 stack",
     )
 
-    declare_use_composition_cmd = DeclareLaunchArgument(
-        "use_composition",
-        default_value="True",
-        description="Whether to use composed bringup",
-    )
-
     declare_use_respawn_cmd = DeclareLaunchArgument(
         "use_respawn",
         default_value="False",
-        description="Whether to respawn if a node crashes. Applied when composition is disabled.",
+        description="Whether to respawn standalone Odin and perception helper nodes",
     )
 
     declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
@@ -142,10 +135,16 @@ def generate_launch_description():
         "use_rviz", default_value="True", description="Whether to start RVIZ"
     )
 
-    declare_use_atlas_localization_adapter_cmd = DeclareLaunchArgument(
-        "use_atlas_localization_adapter",
-        default_value="False",
-        description="Use atlas_localization_adapter for odometry and fused perception LiDAR clouds",
+    declare_launch_odin_cmd = DeclareLaunchArgument(
+        "launch_odin",
+        default_value="True",
+        description="Whether to launch the Odin1 host SDK driver",
+    )
+
+    declare_launch_livox_cmd = DeclareLaunchArgument(
+        "launch_livox",
+        default_value="True",
+        description="Whether to launch Livox for Livox/Odin cloud fusion",
     )
 
     declare_use_terrain_zone_monitor_cmd = DeclareLaunchArgument(
@@ -160,7 +159,7 @@ def generate_launch_description():
         RewrittenYaml(
             source_file=params_file,
             root_key=namespace,
-            param_rewrites={},
+            param_rewrites={"use_sim_time": use_sim_time},
             convert_types=True,
         ),
         allow_substs=True,
@@ -175,17 +174,62 @@ def generate_launch_description():
         launch_arguments={
             "namespace": namespace,
             "use_sim_time": use_sim_time,
-            "robot_name" : robot_name,
+            "robot_name": robot_name,
         }.items(),
     )
 
+    start_odin_node = Node(
+        condition=IfCondition(launch_odin),
+        package="odin_ros_driver",
+        executable="host_sdk_sample",
+        name="host_sdk_sample",
+        output="screen",
+        respawn=use_respawn,
+        respawn_delay=2.0,
+        additional_env=get_libusb_env(),
+    )
+
     start_livox_ros_driver2_node = Node(
+        condition=IfCondition(launch_livox),
         package="livox_ros_driver2",
         executable="livox_ros_driver2_node",
         name="livox_ros_driver2",
         output="screen",
-        namespace=namespace,
+        respawn=use_respawn,
+        respawn_delay=2.0,
         parameters=[configured_params],
+    )
+
+    start_point_cloud_deskew_node = Node(
+        package="sentry_fusion",
+        executable="sentry_fusion_node",
+        name="point_cloud_deskew",
+        output="screen",
+        respawn=use_respawn,
+        respawn_delay=2.0,
+        parameters=[configured_params],
+    )
+
+    start_odom_adapter_node = Node(
+        package="sentry_fusion",
+        executable="odom_adapter_node",
+        name="odom_adapter",
+        output="screen",
+        respawn=use_respawn,
+        respawn_delay=2.0,
+        parameters=[configured_params],
+    )
+
+    start_odin_localization_group = GroupAction(
+        actions=[
+            PushRosNamespace(namespace=namespace),
+            SetRemap("/tf", "tf"),
+            SetRemap("/tf_static", "tf_static"),
+            start_odin_node,
+            start_livox_ros_driver2_node,
+            start_point_cloud_deskew_node,
+            start_odom_adapter_node,
+        ],
     )
 
     rviz_cmd = IncludeLaunchDescription(
@@ -204,13 +248,10 @@ def generate_launch_description():
             "namespace": namespace,
             "slam": slam,
             "map": map_yaml_file,
-            "prior_pcd_file": prior_pcd_file,
             "use_sim_time": use_sim_time,
             "params_file": params_file,
             "autostart": autostart,
-            "use_composition": use_composition,
             "use_respawn": use_respawn,
-            "use_atlas_localization_adapter": use_atlas_localization_adapter,
             "use_terrain_zone_monitor": use_terrain_zone_monitor,
         }.items(),
     )
@@ -222,24 +263,22 @@ def generate_launch_description():
     ld.add_action(declare_slam_cmd)
     ld.add_action(declare_world_cmd)
     ld.add_action(declare_map_yaml_cmd)
-    ld.add_action(declare_prior_pcd_file_cmd)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
     ld.add_action(declare_autostart_cmd)
-    ld.add_action(declare_use_composition_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_use_robot_state_pub_cmd)
     ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_robot_name_cmd)
-    ld.add_action(declare_use_atlas_localization_adapter_cmd)
+    ld.add_action(declare_launch_odin_cmd)
+    ld.add_action(declare_launch_livox_cmd)
     ld.add_action(declare_use_terrain_zone_monitor_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
-    ld.add_action(start_livox_ros_driver2_node)
+    ld.add_action(start_odin_localization_group)
     ld.add_action(bringup_cmd)
     ld.add_action(rviz_cmd)
-    
 
     return ld

@@ -36,11 +36,8 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
 
-    # Variables
-    lifecycle_nodes = ["map_saver"]
-
     # Create our own temporary YAML files that include substitutions
-    param_substitutions = {"use_sim_time": use_sim_time}
+    param_substitutions = {"use_sim_time": use_sim_time, "autostart": autostart}
 
     configured_params = ParameterFile(
         RewrittenYaml(
@@ -78,7 +75,7 @@ def generate_launch_description():
     declare_use_respawn_cmd = DeclareLaunchArgument(
         "use_respawn",
         default_value="False",
-        description="Whether to respawn if a node crashes. Applied when composition is disabled.",
+        description="Whether to respawn standalone SLAM helper nodes",
     )
 
     declare_log_level_cmd = DeclareLaunchArgument(
@@ -101,11 +98,7 @@ def generate_launch_description():
         name="lifecycle_manager_slam",
         output="screen",
         arguments=["--ros-args", "--log-level", log_level],
-        parameters=[
-            {"use_sim_time": use_sim_time},
-            {"autostart": autostart},
-            {"node_names": lifecycle_nodes},
-        ],
+        parameters=[configured_params],
     )
 
     start_pointcloud_to_laserscan_node = Node(
@@ -137,24 +130,6 @@ def generate_launch_description():
             ("/map_metadata", "map_metadata"),
             ("/map_updates", "map_updates"),
         ],
-    )
-
-    start_point_lio_node = Node(
-        package="point_lio",
-        executable="pointlio_mapping",
-        name="point_lio",
-        output="screen",
-        respawn=use_respawn,
-        respawn_delay=2.0,
-        additional_env={
-            "LD_PRELOAD": "/usr/lib/x86_64-linux-gnu/libusb-1.0.so.0",
-        },
-        parameters=[
-            configured_params,
-            {"prior_pcd.enable": False},
-            {"pcd_save.pcd_save_en": True},
-        ],
-        arguments=["--ros-args", "--log-level", log_level],
     )
 
     start_static_transform_node = Node(
@@ -198,7 +173,6 @@ def generate_launch_description():
 
     ld.add_action(start_pointcloud_to_laserscan_node)
     ld.add_action(start_sync_slam_toolbox_node)
-    ld.add_action(start_point_lio_node)
     ld.add_action(start_static_transform_node)
 
     return ld
