@@ -41,6 +41,7 @@ def generate_launch_description():
             param_rewrites={
                 "use_sim_time": use_sim_time,
                 "autostart": autostart,
+                "zones_file": zones_file,
             },
             convert_types=True,
         ),
@@ -61,15 +62,15 @@ def generate_launch_description():
     declare_params_file_cmd = DeclareLaunchArgument(
         "params_file",
         default_value=os.path.join(
-            bringup_dir, "config", "reality", "semantic_terrain_layer_test_params.yaml"
+            bringup_dir, "config", "reality", "nav2_params_mppi.yaml"
         ),
-        description="Standalone semantic terrain layer test parameter file",
+        description="MPPI parameter file containing the standalone semantic terrain test costmap",
     )
 
     declare_zones_file_cmd = DeclareLaunchArgument(
         "zones_file",
         default_value=os.path.join(
-            bringup_dir, "config", "reality", "semantic_terrain_layer_test_zones.yaml"
+            bringup_dir, "config", "reality", "terrain_semantic_zones.yaml"
         ),
         description="Semantic terrain zone YAML to load into the standalone test costmap",
     )

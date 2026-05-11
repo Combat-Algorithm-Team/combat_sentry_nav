@@ -289,6 +289,34 @@ terrain_zone_monitor:
     marker_topic: /terrain_semantic_markers
     publish_markers: true
 
+# Standalone semantic terrain layer test costmap.
+# Used by semantic_terrain_layer_test_launch.py to inspect the semantic layer
+# without starting the real sentry navigation stack or real sensor layers.
+costmap:
+  costmap:
+    ros__parameters:
+      use_sim_time: False
+      global_frame: map
+      robot_base_frame: base_yaw_odom
+      rolling_window: true
+      width: 12
+      height: 8
+      resolution: 0.05
+      robot_radius: 0.42
+      footprint: "[ [0.32, 0.32], [0.32, -0.32], [-0.32, -0.32], [-0.32, 0.32] ]"
+      update_frequency: 2.0
+      publish_frequency: 2.0
+      transform_tolerance: 0.2
+      track_unknown_space: false
+      plugins: ["terrain_semantic_layer"]
+      terrain_semantic_layer:
+        plugin: combat_nav2_costmap_2d::SemanticPolygonLayer
+        enabled: true
+        zones_file: $(find-pkg-share pb2025_nav_bringup)/config/reality/terrain_semantic_zones.yaml
+        use_maximum: true
+        update_full_map: true
+      always_send_full_costmap: true
+
 small_gicp_relocalization:
   ros__parameters:
     use_sim_time: False
