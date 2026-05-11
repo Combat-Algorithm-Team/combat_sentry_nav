@@ -13,15 +13,50 @@
 # limitations under the License.
 
 import os
+import signal
+import subprocess
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, SetEnvironmentVariable, TimerAction
+from launch.actions import (
+    DeclareLaunchArgument,
+    EmitEvent,
+    ExecuteProcess,
+    RegisterEventHandler,
+    SetEnvironmentVariable,
+    TimerAction,
+)
 from launch.conditions import IfCondition
+from launch.events import matches_action
+from launch.events.process import SignalProcess
+from launch.event_handlers import OnShutdown
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
 from nav2_common.launch import RewrittenYaml
+
+
+def cleanup_standalone_costmap(_event, _context, post_cleanup_actions=None):
+    service_command = [
+        "ros2",
+        "service",
+        "call",
+        "/costmap/costmap/change_state",
+        "lifecycle_msgs/srv/ChangeState",
+    ]
+    for label, transition_id in (("deactivate", 4), ("cleanup", 2), ("shutdown", 5)):
+        try:
+            subprocess.run(
+                [*service_command, f"{{transition: {{id: {transition_id}}}}}"],
+                check=False,
+                timeout=2.0,
+            )
+        except subprocess.TimeoutExpired:
+            print(
+                f"semantic_terrain_layer_test: timed out trying to {label} /costmap/costmap",
+                flush=True,
+            )
+    return post_cleanup_actions or []
 
 
 def generate_launch_description():
@@ -121,9 +156,18 @@ def generate_launch_description():
     standalone_costmap_cmd = Node(
         package="nav2_costmap_2d",
         executable="nav2_costmap_2d",
+        exec_name="nav2_costmap_2d",
         output="screen",
         parameters=[configured_params],
         arguments=["--ros-args", "--log-level", log_level],
+        prefix="setsid",
+    )
+
+    terminate_costmap_cmd = EmitEvent(
+        event=SignalProcess(
+            signal_number=signal.SIGTERM,
+            process_matcher=matches_action(standalone_costmap_cmd),
+        )
     )
 
     configure_costmap_cmd = TimerAction(
@@ -162,6 +206,14 @@ def generate_launch_description():
         ],
     )
 
+    cleanup_costmap_cmd = RegisterEventHandler(
+        OnShutdown(
+            on_shutdown=lambda event, context: cleanup_standalone_costmap(
+                event, context, [terminate_costmap_cmd]
+            )
+        )
+    )
+
     terrain_zone_monitor_cmd = Node(
         condition=IfCondition(use_zone_monitor),
         package="combat_nav2_plugins",
@@ -181,6 +233,7 @@ def generate_launch_description():
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_use_zone_monitor_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(cleanup_costmap_cmd)
     ld.add_action(static_tf_cmd)
     ld.add_action(standalone_costmap_cmd)
     ld.add_action(configure_costmap_cmd)
