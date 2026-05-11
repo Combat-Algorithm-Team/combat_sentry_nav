@@ -32,7 +32,6 @@ zones:
     type: high_cost
     cost: 225
     state_id: 1
-    speed_limit: 0.45
     priority: 75
     line_width: 0.25
     segments:
@@ -48,7 +47,6 @@ zones:
     type: high_cost
     cost: 165
     state_id: 1
-    speed_limit: 0.70
     priority: 50
     polygon:
       - [0.0, 0.0]
@@ -61,7 +59,6 @@ zones:
     type: high_cost
     cost: 150
     state_id: 1
-    speed_limit: 0.80
     priority: 45
     polygon:
       - [0.0, 0.0]
@@ -74,7 +71,6 @@ zones:
     type: high_cost
     cost: 170
     state_id: 1
-    speed_limit: 0.60
     priority: 55
     polygon:
       - [0.0, 0.0]
@@ -87,7 +83,6 @@ zones:
     type: lethal
     cost: 254
     state_id: 255
-    speed_limit: 0.0
     priority: 100
     polygon:
       - [0.0, 0.0]

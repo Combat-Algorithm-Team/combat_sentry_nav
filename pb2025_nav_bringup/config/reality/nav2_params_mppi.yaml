@@ -286,7 +286,6 @@ terrain_zone_monitor:
     normal_state_id: 0
     state_topic: /sentry_terrain_state
     state_name_topic: /sentry_terrain_zone_name
-    speed_limit_topic: /sentry_terrain_speed_limit
     marker_topic: /terrain_semantic_markers
     publish_markers: true
 
