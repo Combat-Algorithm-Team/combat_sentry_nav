@@ -52,8 +52,8 @@ odom_adapter:
 terrain_analysis:
   ros__parameters:
     scanVoxelSize: 0.05                 # 点云下采样
-    decayTime: 0.5                      # 点云时间差阈值 大于则不会被处理
-    noDecayDis: 0.0                     # 点云距离阈值 小于该阈值不考虑时间差
+    decayTime: 0.8                      # 点云时间差阈值；动态障碍离开视野后快速释放历史足迹
+    noDecayDis: 0.8                     # 仅保护车体近盲区历史点，不覆盖整个 4m local map
     clearingDis: 0.0                    # 该距离外的点会被清除
     useSorting: True                    # 这个参数开起来就能上坡了；如果 use_sorting,那么就以周围点中的分位点作为地面点，否则以最低点作为地面点；周围其余点相对于地面点的高度作为通过代价，所以对于坡面，有的点的代价是正，有的是负，就相互抵消了；不要与 consider_drop 同时开启，计算上会有冲突
     quantileZ: 0.2                      # useful if use_sorting is enabled.
@@ -64,13 +64,13 @@ terrain_analysis:
     minDyObsDis: 0.3                    # 以下参数都是在 clear_dy_obs 的情况下才有用的
     minDyObsAngle: 0.0
     minDyObsRelZ: -0.3
-    absDyObsRelZThre: 0.2
-    minDyObsVFOV: -28.0
+    absDyObsRelZThre: 0.12              # 低于 20cm 台阶高度，避免台阶被当作近地动态点清除
+    minDyObsVFOV: 10.0                  # 只清除明显高于近水平地形的旧点，保护中央高地侧边台阶
     maxDyObsVFOV: 33.0
-    minDyObsPointNum: 1
+    minDyObsPointNum: 4
     noDataObstacle: False               # treat no data as obstacle
     noDataBlockSkipNum: 0
-    minBlockPointNum: 10
+    minBlockPointNum: 4
     vehicleHeight: 0.6                  # 小于车辆高度的点才会进行处理
     voxelPointUpdateThre: 100
     voxelTimeUpdateThre: 1.0
@@ -82,7 +82,7 @@ terrain_analysis:
 terrain_analysis_ext:
   ros__parameters:
     scanVoxelSize: 0.1
-    decayTime: 0.2
+    decayTime: 1.5
     noDecayDis: 0.0
     clearingDis: 20.0
     useSorting: true
@@ -94,7 +94,7 @@ terrain_analysis_ext:
     upperBoundZ: 0.5
     disRatioZ: 0.2
     checkTerrainConn: False
-    terrainUnderVehicle: -0.75
+    terrainUnderVehicle: -0.176
     terrainConnThre: 0.5
     ceilingFilteringThre: 2.0
     localTerrainMapRadius: 4.0
@@ -378,7 +378,7 @@ local_costmap:
         unknown_threshold: 5
         z_resolution: 0.05
         z_voxels: 16
-        min_obstacle_height: 0.0
+        min_obstacle_height: -1.0
         max_obstacle_height: 2.0
         min_obstacle_intensity: 0.1
         max_obstacle_intensity: 2.0
@@ -388,8 +388,8 @@ local_costmap:
           # '<robot_namespace>' keyword shall be replaced with 'namespace' where user defined.
           # It doesn't need to start with '/'
           topic: <robot_namespace>/terrain_map
-          sensor_frame: front_mid360
-          min_obstacle_height: 0.0
+          sensor_frame: base_yaw
+          min_obstacle_height: -1.0
           max_obstacle_height: 2.0
           obstacle_max_range: 5.0
           obstacle_min_range: 0.2
@@ -432,7 +432,7 @@ global_costmap:
         unknown_threshold: 5
         z_resolution: 0.05
         z_voxels: 16
-        min_obstacle_height: 0.0
+        min_obstacle_height: -1.0
         max_obstacle_height: 2.0
         min_obstacle_intensity: 0.1
         max_obstacle_intensity: 2.0
@@ -442,8 +442,8 @@ global_costmap:
           # '<robot_namespace>' keyword shall be replaced with 'namespace' where user defined.
           # It doesn't need to start with '/'
           topic: <robot_namespace>/terrain_map_ext
-          sensor_frame: front_mid360
-          min_obstacle_height: 0.0
+          sensor_frame: base_yaw
+          min_obstacle_height: -1.0
           max_obstacle_height: 2.0
           obstacle_max_range: 10.0
           obstacle_min_range: 0.2
