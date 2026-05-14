@@ -49,6 +49,9 @@ def generate_launch_description():
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
     use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
+    publish_static_map_to_odom_tf = LaunchConfiguration(
+        "publish_static_map_to_odom_tf"
+    )
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"use_sim_time": use_sim_time, "yaml_filename": map_yaml_file}
@@ -131,6 +134,12 @@ def generate_launch_description():
         description="Start terrain_zone_monitor for sentry semantic terrain state publishing",
     )
 
+    declare_publish_static_map_to_odom_tf_cmd = DeclareLaunchArgument(
+        "publish_static_map_to_odom_tf",
+        default_value="False",
+        description="Publish a static map -> odom transform as a fallback",
+    )
+
     # Specify the actions
     bringup_cmd_group = GroupAction(
         [
@@ -157,6 +166,7 @@ def generate_launch_description():
                     "use_respawn": use_respawn,
                     "params_file": params_file,
                     "log_level": log_level,
+                    "publish_static_map_to_odom_tf": publish_static_map_to_odom_tf,
                 }.items(),
             ),
             IncludeLaunchDescription(
@@ -172,6 +182,7 @@ def generate_launch_description():
                     "params_file": params_file,
                     "container_name": "nav2_container",
                     "log_level": log_level,
+                    "publish_static_map_to_odom_tf": publish_static_map_to_odom_tf,
                 }.items(),
             ),
             IncludeLaunchDescription(
@@ -209,6 +220,7 @@ def generate_launch_description():
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(declare_use_terrain_zone_monitor_cmd)
+    ld.add_action(declare_publish_static_map_to_odom_tf_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(bringup_cmd_group)

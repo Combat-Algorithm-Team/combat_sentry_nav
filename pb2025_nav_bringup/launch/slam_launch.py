@@ -18,6 +18,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
@@ -35,6 +36,9 @@ def generate_launch_description():
     autostart = LaunchConfiguration("autostart")
     use_respawn = LaunchConfiguration("use_respawn")
     log_level = LaunchConfiguration("log_level")
+    publish_static_map_to_odom_tf = LaunchConfiguration(
+        "publish_static_map_to_odom_tf"
+    )
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {"use_sim_time": use_sim_time, "autostart": autostart}
@@ -80,6 +84,12 @@ def generate_launch_description():
 
     declare_log_level_cmd = DeclareLaunchArgument(
         "log_level", default_value="info", description="log level"
+    )
+
+    declare_publish_static_map_to_odom_tf_cmd = DeclareLaunchArgument(
+        "publish_static_map_to_odom_tf",
+        default_value="False",
+        description="Publish a static map -> odom transform as a fallback",
     )
 
     start_map_saver_server_cmd = Node(
@@ -133,6 +143,7 @@ def generate_launch_description():
     )
 
     start_static_transform_node = Node(
+        condition=IfCondition(publish_static_map_to_odom_tf),
         package="tf2_ros",
         executable="static_transform_publisher",
         name="static_transform_publisher_map2odom",
@@ -166,6 +177,7 @@ def generate_launch_description():
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_use_respawn_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_publish_static_map_to_odom_tf_cmd)
 
     # Running Map Saver Server
     ld.add_action(start_map_saver_server_cmd)

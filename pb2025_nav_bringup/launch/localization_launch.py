@@ -18,8 +18,9 @@ import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
-from launch_ros.actions import LoadComposableNodes
+from launch_ros.actions import LoadComposableNodes, Node
 from launch_ros.descriptions import ComposableNode, ParameterFile
 from nav2_common.launch import RewrittenYaml
 
@@ -42,6 +43,9 @@ def generate_launch_description():
     container_name = LaunchConfiguration("container_name")
     container_name_full = (namespace, "/", container_name)
     log_level = LaunchConfiguration("log_level")
+    publish_static_map_to_odom_tf = LaunchConfiguration(
+        "publish_static_map_to_odom_tf"
+    )
 
     # Create our own temporary YAML files that include substitutions
     param_substitutions = {
@@ -104,6 +108,38 @@ def generate_launch_description():
         "log_level", default_value="info", description="log level"
     )
 
+    declare_publish_static_map_to_odom_tf_cmd = DeclareLaunchArgument(
+        "publish_static_map_to_odom_tf",
+        default_value="False",
+        description="Publish a static map -> odom transform as a fallback",
+    )
+
+    start_static_map_to_odom_tf_cmd = Node(
+        condition=IfCondition(publish_static_map_to_odom_tf),
+        package="tf2_ros",
+        executable="static_transform_publisher",
+        name="static_transform_publisher_map2odom",
+        output="screen",
+        arguments=[
+            "--x",
+            "0.0",
+            "--y",
+            "0.0",
+            "--z",
+            "0.0",
+            "--roll",
+            "0.0",
+            "--pitch",
+            "0.0",
+            "--yaw",
+            "0.0",
+            "--frame-id",
+            "map",
+            "--child-frame-id",
+            "odom",
+        ],
+    )
+
     load_map_server_composable_nodes = LoadComposableNodes(
         target_container=container_name_full,
         composable_node_descriptions=[
@@ -137,8 +173,10 @@ def generate_launch_description():
     ld.add_action(declare_autostart_cmd)
     ld.add_action(declare_container_name_cmd)
     ld.add_action(declare_log_level_cmd)
+    ld.add_action(declare_publish_static_map_to_odom_tf_cmd)
 
     # Add the actions to launch all of the localization nodes
+    ld.add_action(start_static_map_to_odom_tf_cmd)
     ld.add_action(load_map_server_composable_nodes)
 
     return ld

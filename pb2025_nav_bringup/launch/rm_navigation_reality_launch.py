@@ -57,6 +57,9 @@ def generate_launch_description():
     launch_odin = LaunchConfiguration("launch_odin")
     launch_livox = LaunchConfiguration("launch_livox")
     use_terrain_zone_monitor = LaunchConfiguration("use_terrain_zone_monitor")
+    publish_static_map_to_odom_tf = LaunchConfiguration(
+        "publish_static_map_to_odom_tf"
+    )
 
     # Declare the launch arguments
     declare_namespace_cmd = DeclareLaunchArgument(
@@ -151,6 +154,12 @@ def generate_launch_description():
         "use_terrain_zone_monitor",
         default_value="True",
         description="Start terrain_zone_monitor for sentry semantic terrain state publishing",
+    )
+
+    declare_publish_static_map_to_odom_tf_cmd = DeclareLaunchArgument(
+        "publish_static_map_to_odom_tf",
+        default_value="False",
+        description="Publish a static map -> odom transform as a fallback",
     )
 
     # Create our own temporary YAML files that include substitutions
@@ -253,6 +262,7 @@ def generate_launch_description():
             "autostart": autostart,
             "use_respawn": use_respawn,
             "use_terrain_zone_monitor": use_terrain_zone_monitor,
+            "publish_static_map_to_odom_tf": publish_static_map_to_odom_tf,
         }.items(),
     )
 
@@ -274,6 +284,7 @@ def generate_launch_description():
     ld.add_action(declare_launch_odin_cmd)
     ld.add_action(declare_launch_livox_cmd)
     ld.add_action(declare_use_terrain_zone_monitor_cmd)
+    ld.add_action(declare_publish_static_map_to_odom_tf_cmd)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
