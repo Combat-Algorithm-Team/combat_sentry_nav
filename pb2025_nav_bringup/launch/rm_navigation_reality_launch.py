@@ -73,8 +73,8 @@ def generate_launch_description():
 
     declare_world_cmd = DeclareLaunchArgument(
         "world",
-        default_value="rmuc_2025",
-        description="Select world: 'rmuc_2025' or 'rmul_2025' (map file share the same name as the this parameter)",
+        default_value="rmuc2026",
+        description="Select world: map file in map/reality with the same name as this parameter",
     )
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
@@ -132,7 +132,7 @@ def generate_launch_description():
     )
 
     declare_use_rviz_cmd = DeclareLaunchArgument(
-        "use_rviz", default_value="True", description="Whether to start RVIZ"
+        "use_rviz", default_value="False", description="Whether to start RVIZ"
     )
 
     declare_launch_odin_cmd = DeclareLaunchArgument(

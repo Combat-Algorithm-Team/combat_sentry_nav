@@ -27,6 +27,12 @@ from nav2_common.launch import RewrittenYaml
 def generate_launch_description():
     # Get the launch directory
     bringup_dir = get_package_share_directory("pb2025_nav_bringup")
+    default_map_file = os.path.join(
+        bringup_dir, "map", "reality", "rmuc2026.yaml"
+    )
+    default_params_file = os.path.join(
+        bringup_dir, "config", "reality", "nav2_params_mppi.yaml"
+    )
 
     namespace = LaunchConfiguration("namespace")
     map_yaml_file = LaunchConfiguration("map")
@@ -65,7 +71,9 @@ def generate_launch_description():
     )
 
     declare_map_yaml_cmd = DeclareLaunchArgument(
-        "map", description="Full path to map yaml file to load"
+        "map",
+        default_value=default_map_file,
+        description="Full path to map yaml file to load",
     )
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
@@ -76,7 +84,7 @@ def generate_launch_description():
 
     declare_params_file_cmd = DeclareLaunchArgument(
         "params_file",
-        default_value=os.path.join(bringup_dir, "params", "nav2_params.yaml"),
+        default_value=default_params_file,
         description="Full path to the ROS2 parameters file to use for all launched nodes",
     )
 
