@@ -15,7 +15,5 @@ log/*
 __pycache__
 
 *~
-*.pcd
-*.stl
 *.gv
 *.pdf
