@@ -158,7 +158,7 @@ def generate_launch_description():
 
     declare_publish_static_map_to_odom_tf_cmd = DeclareLaunchArgument(
         "publish_static_map_to_odom_tf",
-        default_value="False",
+        default_value="True",
         description="Publish a static map -> odom transform as a fallback",
     )
 
