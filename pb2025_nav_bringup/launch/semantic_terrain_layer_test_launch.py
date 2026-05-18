@@ -27,9 +27,9 @@ from launch.actions import (
     TimerAction,
 )
 from launch.conditions import IfCondition
+from launch.event_handlers import OnShutdown
 from launch.events import matches_action
 from launch.events.process import SignalProcess
-from launch.event_handlers import OnShutdown
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
@@ -64,9 +64,13 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     params_file = LaunchConfiguration("params_file")
+    map_yaml_file = LaunchConfiguration("map")
     zones_file = LaunchConfiguration("zones_file")
     autostart = LaunchConfiguration("autostart")
+    use_map_server = LaunchConfiguration("use_map_server")
     use_zone_monitor = LaunchConfiguration("use_zone_monitor")
+    use_rviz = LaunchConfiguration("use_rviz")
+    rviz_config_file = LaunchConfiguration("rviz_config")
     log_level = LaunchConfiguration("log_level")
 
     configured_params = ParameterFile(
@@ -76,6 +80,7 @@ def generate_launch_description():
             param_rewrites={
                 "use_sim_time": use_sim_time,
                 "autostart": autostart,
+                "yaml_filename": map_yaml_file,
                 "zones_file": zones_file,
             },
             convert_types=True,
@@ -99,7 +104,15 @@ def generate_launch_description():
         default_value=os.path.join(
             bringup_dir, "config", "reality", "nav2_params_mppi.yaml"
         ),
-        description="MPPI parameter file containing the standalone semantic terrain test costmap",
+        description="Parameter file containing the standalone semantic terrain test costmap",
+    )
+
+    declare_map_yaml_cmd = DeclareLaunchArgument(
+        "map",
+        default_value=os.path.join(
+            bringup_dir, "map", "reality", "rmuc2026.yaml"
+        ),
+        description="Full path to the map YAML loaded by map_server",
     )
 
     declare_zones_file_cmd = DeclareLaunchArgument(
@@ -113,13 +126,31 @@ def generate_launch_description():
     declare_autostart_cmd = DeclareLaunchArgument(
         "autostart",
         default_value="True",
-        description="Automatically configure and activate the standalone costmap",
+        description="Automatically configure and activate map_server and the standalone costmap",
+    )
+
+    declare_use_map_server_cmd = DeclareLaunchArgument(
+        "use_map_server",
+        default_value="True",
+        description="Start nav2_map_server and publish the static map",
     )
 
     declare_use_zone_monitor_cmd = DeclareLaunchArgument(
         "use_zone_monitor",
         default_value="True",
-        description="Start terrain_zone_monitor for markers and state-topic checks",
+        description="Start terrain_zone_monitor for semantic markers and state-topic checks",
+    )
+
+    declare_use_rviz_cmd = DeclareLaunchArgument(
+        "use_rviz",
+        default_value="False",
+        description="Start RViz with the default navigation view",
+    )
+
+    declare_rviz_config_file_cmd = DeclareLaunchArgument(
+        "rviz_config",
+        default_value=os.path.join(bringup_dir, "rviz", "nav2_default_view.rviz"),
+        description="Full path to the RViz config file to use",
     )
 
     declare_log_level_cmd = DeclareLaunchArgument(
@@ -151,6 +182,26 @@ def generate_launch_description():
             "--child-frame-id",
             "base_yaw_odom",
         ],
+    )
+
+    map_server_cmd = Node(
+        condition=IfCondition(use_map_server),
+        package="nav2_map_server",
+        executable="map_server",
+        name="map_server",
+        output="screen",
+        parameters=[configured_params],
+        arguments=["--ros-args", "--log-level", log_level],
+    )
+
+    map_lifecycle_manager_cmd = Node(
+        condition=IfCondition(use_map_server),
+        package="nav2_lifecycle_manager",
+        executable="lifecycle_manager",
+        name="lifecycle_manager_localization",
+        output="screen",
+        parameters=[configured_params],
+        arguments=["--ros-args", "--log-level", log_level],
     )
 
     standalone_costmap_cmd = Node(
@@ -220,8 +271,21 @@ def generate_launch_description():
         executable="terrain_zone_monitor",
         name="terrain_zone_monitor",
         output="screen",
-        parameters=[configured_params],
+        parameters=[configured_params, {"publish_markers": True}],
         arguments=["--ros-args", "--log-level", log_level],
+    )
+
+    rviz_cmd = Node(
+        condition=IfCondition(use_rviz),
+        package="rviz2",
+        executable="rviz2",
+        name="rviz2",
+        output="screen",
+        arguments=["-d", rviz_config_file],
+        remappings=[
+            ("/tf", "tf"),
+            ("/tf_static", "tf_static"),
+        ],
     )
 
     ld = LaunchDescription()
@@ -229,14 +293,21 @@ def generate_launch_description():
     ld.add_action(colorized_output_envvar)
     ld.add_action(declare_use_sim_time_cmd)
     ld.add_action(declare_params_file_cmd)
+    ld.add_action(declare_map_yaml_cmd)
     ld.add_action(declare_zones_file_cmd)
     ld.add_action(declare_autostart_cmd)
+    ld.add_action(declare_use_map_server_cmd)
     ld.add_action(declare_use_zone_monitor_cmd)
+    ld.add_action(declare_use_rviz_cmd)
+    ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_log_level_cmd)
     ld.add_action(cleanup_costmap_cmd)
     ld.add_action(static_tf_cmd)
+    ld.add_action(map_server_cmd)
+    ld.add_action(map_lifecycle_manager_cmd)
     ld.add_action(standalone_costmap_cmd)
     ld.add_action(configure_costmap_cmd)
     ld.add_action(activate_costmap_cmd)
     ld.add_action(terrain_zone_monitor_cmd)
+    ld.add_action(rviz_cmd)
     return ld
