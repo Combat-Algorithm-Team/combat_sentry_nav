@@ -83,7 +83,7 @@ terrain_analysis:
     minRelZ: -1.5                       # min_rel_z 以及 max_rel_z 限制了有效点云点的Z值范围，用于对天花板和地板进行处理
     maxRelZ: 0.5
     disRatioZ: 0.2                      # Z 值的最大最小范围由这两个值决定，但是并不等于这两个值，是有一个比例关系的，距离机器人越远，限定范围就越大，这其中考虑了坡度
-    bodyFilteringRadius: 0.4           # 车体半径内点云滤除，避免车体反射进入地形代价
+    bodyFilteringRadius: 0.42           # 车体半径内点云滤除，避免车体反射进入地形代价
 
 terrain_analysis_ext:
   ros__parameters:
@@ -104,7 +104,7 @@ terrain_analysis_ext:
     terrainConnThre: 0.5
     ceilingFilteringThre: 2.0
     localTerrainMapRadius: 4.0
-    bodyFilteringRadius: 0.4
+    bodyFilteringRadius: 0.42
 
 cmd_vel_transform:
   ros__parameters:
@@ -129,7 +129,7 @@ terrain_zone_monitor:
     state_topic: /sentry_terrain_state
     state_name_topic: /sentry_terrain_zone_name
     marker_topic: /terrain_semantic_markers
-    publish_markers: true
+    publish_markers: False
 
 # Standalone semantic terrain layer test costmap.
 # Used by semantic_terrain_layer_test_launch.py to inspect the semantic layer
