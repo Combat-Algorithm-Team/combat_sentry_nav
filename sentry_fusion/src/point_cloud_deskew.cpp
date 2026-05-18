@@ -40,6 +40,7 @@ constexpr std::uint32_t K_LIVOX_Z_OFFSET = 8U;
 constexpr std::uint32_t K_LIVOX_TIMESTAMP_OFFSET = 18U;
 constexpr std::uint32_t K_LIVOX_MIN_POINT_STEP =
   K_LIVOX_TIMESTAMP_OFFSET + static_cast<std::uint32_t>(sizeof(double));
+constexpr double K_PI = 3.14159265358979323846;
 
 template <typename T>
 T readScalar(const std::uint8_t * data, std::uint32_t offset)
@@ -58,6 +59,17 @@ void writeScalar(std::uint8_t * data, std::uint32_t offset, const T & value)
 int64_t secondsToNanoseconds(double seconds)
 {
   return static_cast<int64_t>(std::llround(seconds * K_NANOSECONDS_PER_SECOND));
+}
+
+double degreesToRadians(double degrees) { return degrees * K_PI / 180.0; }
+
+double normalizeAngle(double angle)
+{
+  angle = std::fmod(angle + K_PI, 2.0 * K_PI);
+  if (angle < 0.0) {
+    angle += 2.0 * K_PI;
+  }
+  return angle - K_PI;
 }
 
 int64_t absDeltaNs(int64_t lhs, int64_t rhs) { return lhs > rhs ? lhs - rhs : rhs - lhs; }
@@ -81,6 +93,11 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("odin_frame", "odin1_base_link");
   this->declare_parameter<std::string>("livox_frame", "front_mid360");
   this->declare_parameter<std::string>("fused_output_frame", "odom");
+  this->declare_parameter<bool>("enable_odin_sector_filter", false);
+  this->declare_parameter<double>("odin_sector_filter_radius_min", 0.0);
+  this->declare_parameter<double>("odin_sector_filter_radius", 0.0);
+  this->declare_parameter<double>("odin_sector_filter_angle_center_deg", 0.0);
+  this->declare_parameter<double>("odin_sector_filter_angle_width_deg", 0.0);
   this->declare_parameter<double>("time_offset_sec", 0.0);
   this->declare_parameter<double>("odom_cache_duration_sec", 2.0);
   this->declare_parameter<double>("fusion_cache_duration_sec", 1.0);
@@ -95,6 +112,10 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   double sync_tolerance_sec = 0.05;
   double max_odom_gap_sec = 0.10;
   double max_extrapolation_sec = 0.05;
+  double odin_sector_filter_radius_min = 0.0;
+  double odin_sector_filter_radius = 0.0;
+  double odin_sector_filter_angle_center_deg = 0.0;
+  double odin_sector_filter_angle_width_deg = 0.0;
 
   this->get_parameter("input_cloud_topic", input_cloud_topic_);
   this->get_parameter("output_cloud_topic", output_cloud_topic_);
@@ -110,6 +131,11 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->get_parameter("odin_frame", odin_frame_);
   this->get_parameter("livox_frame", livox_frame_);
   this->get_parameter("fused_output_frame", fused_output_frame_);
+  this->get_parameter("enable_odin_sector_filter", enable_odin_sector_filter_);
+  this->get_parameter("odin_sector_filter_radius_min", odin_sector_filter_radius_min);
+  this->get_parameter("odin_sector_filter_radius", odin_sector_filter_radius);
+  this->get_parameter("odin_sector_filter_angle_center_deg", odin_sector_filter_angle_center_deg);
+  this->get_parameter("odin_sector_filter_angle_width_deg", odin_sector_filter_angle_width_deg);
   this->get_parameter("time_offset_sec", time_offset_sec);
   this->get_parameter("odom_cache_duration_sec", odom_cache_duration_sec);
   this->get_parameter("fusion_cache_duration_sec", fusion_cache_duration_sec);
@@ -129,6 +155,20 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
     std::max(secondsToNanoseconds(fusion_cache_duration_sec), sync_tolerance_ns_);
   max_odom_gap_ns_ = secondsToNanoseconds(max_odom_gap_sec);
   max_extrapolation_ns_ = secondsToNanoseconds(max_extrapolation_sec);
+  odin_sector_filter_radius_ = std::max(0.0, odin_sector_filter_radius);
+  odin_sector_filter_radius_min_ =
+    std::min(std::max(0.0, odin_sector_filter_radius_min), odin_sector_filter_radius_);
+  odin_sector_filter_angle_center_rad_ = degreesToRadians(odin_sector_filter_angle_center_deg);
+  odin_sector_filter_angle_half_width_rad_ =
+    std::min(K_PI, std::max(0.0, degreesToRadians(odin_sector_filter_angle_width_deg) * 0.5));
+  if (
+    enable_odin_sector_filter_ && (odin_sector_filter_radius_ <= odin_sector_filter_radius_min_ ||
+                                   odin_sector_filter_angle_half_width_rad_ <= 0.0)) {
+    RCLCPP_WARN(
+      this->get_logger(),
+      "Disable Odin sector filter because radius or angle width is not positive.");
+    enable_odin_sector_filter_ = false;
+  }
 
   tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
   tf_listener_ = std::make_unique<tf2_ros::TransformListener>(*tf_buffer_);
@@ -151,8 +191,8 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
     auto fused_qos = rclcpp::QoS(rclcpp::KeepLast(10));
     fused_qos.reliable();
     fused_qos.durability_volatile();
-    fused_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(
-      fused_cloud_topic_, fused_qos);
+    fused_cloud_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>(fused_cloud_topic_, fused_qos);
   }
 
   if (publish_deskewed_cloud_ || !enable_fusion_) {
@@ -169,6 +209,13 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
       "Deskew and fuse Livox '%s' with Odin cloud '%s' into '%s'. Odometry: '%s'.",
       input_cloud_topic_.c_str(), odin_cloud_topic_.c_str(), fused_cloud_topic_.c_str(),
       odom_topic_.c_str());
+    if (enable_odin_sector_filter_) {
+      RCLCPP_INFO(
+        this->get_logger(),
+        "Odin sector filter enabled: radius %.3f-%.3f m, center %.1f deg, width %.1f deg.",
+        odin_sector_filter_radius_min_, odin_sector_filter_radius_,
+        odin_sector_filter_angle_center_deg, odin_sector_filter_angle_width_deg);
+    }
   } else {
     RCLCPP_INFO(
       this->get_logger(),
@@ -422,7 +469,9 @@ bool PointCloudDeskewNode::fuseClouds(
     static_cast<std::size_t>(odin_cloud.width) * odin_cloud.height);
 
   const bool has_livox = appendCloudAsXyzi(livox_cloud, tf_fusion_base_to_livox, fused_pcl);
-  const bool has_odin = appendCloudAsXyzi(odin_cloud, tf_fusion_base_to_odin_odom_, fused_pcl);
+  const bool has_odin = appendCloudAsXyzi(
+    odin_cloud, tf_fusion_base_to_odin_odom_, fused_pcl, enable_odin_sector_filter_,
+    &target_odom_to_base);
   if (!has_livox && !has_odin) {
     return false;
   }
@@ -464,7 +513,8 @@ bool PointCloudDeskewNode::initializeFusionTransforms(const rclcpp::Time & stamp
 
 bool PointCloudDeskewNode::appendCloudAsXyzi(
   const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
-  pcl::PointCloud<pcl::PointXYZI> & cloud)
+  pcl::PointCloud<pcl::PointXYZI> & cloud, bool apply_odin_sector_filter,
+  const tf2::Transform * odom_to_odin)
 {
   if (!hasFloat32Field(msg, "x") || !hasFloat32Field(msg, "y") || !hasFloat32Field(msg, "z")) {
     RCLCPP_WARN_THROTTLE(
@@ -479,11 +529,27 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
   const bool has_intensity = hasFloat32Field(msg, "intensity");
   const std::size_t point_count =
     static_cast<std::size_t>(msg.width) * static_cast<std::size_t>(msg.height);
+  const bool use_odin_sector_filter = apply_odin_sector_filter && odom_to_odin != nullptr;
+  tf2::Transform odin_odom_to_odin;
+  if (use_odin_sector_filter) {
+    odin_odom_to_odin = odom_to_odin->inverse();
+  }
+  std::size_t dropped_sector_points = 0U;
 
   if (has_intensity) {
     sensor_msgs::PointCloud2ConstIterator<float> iter_intensity(msg, "intensity");
     for (std::size_t i = 0; i < point_count; ++i) {
-      const tf2::Vector3 point = transform * tf2::Vector3(*iter_x, *iter_y, *iter_z);
+      const tf2::Vector3 source_point(*iter_x, *iter_y, *iter_z);
+      if (use_odin_sector_filter && shouldDropOdinSectorPoint(source_point, odin_odom_to_odin)) {
+        ++dropped_sector_points;
+        ++iter_x;
+        ++iter_y;
+        ++iter_z;
+        ++iter_intensity;
+        continue;
+      }
+
+      const tf2::Vector3 point = transform * source_point;
       if (std::isfinite(point.x()) && std::isfinite(point.y()) && std::isfinite(point.z())) {
         pcl::PointXYZI output_point;
         output_point.x = static_cast<float>(point.x());
@@ -498,11 +564,24 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
       ++iter_z;
       ++iter_intensity;
     }
+    if (dropped_sector_points > 0U) {
+      RCLCPP_DEBUG(
+        this->get_logger(), "Dropped %zu Odin points by sector filter.", dropped_sector_points);
+    }
     return true;
   }
 
   for (std::size_t i = 0; i < point_count; ++i) {
-    const tf2::Vector3 point = transform * tf2::Vector3(*iter_x, *iter_y, *iter_z);
+    const tf2::Vector3 source_point(*iter_x, *iter_y, *iter_z);
+    if (use_odin_sector_filter && shouldDropOdinSectorPoint(source_point, odin_odom_to_odin)) {
+      ++dropped_sector_points;
+      ++iter_x;
+      ++iter_y;
+      ++iter_z;
+      continue;
+    }
+
+    const tf2::Vector3 point = transform * source_point;
     if (std::isfinite(point.x()) && std::isfinite(point.y()) && std::isfinite(point.z())) {
       pcl::PointXYZI output_point;
       output_point.x = static_cast<float>(point.x());
@@ -517,7 +596,31 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
     ++iter_z;
   }
 
+  if (dropped_sector_points > 0U) {
+    RCLCPP_DEBUG(
+      this->get_logger(), "Dropped %zu Odin points by sector filter.", dropped_sector_points);
+  }
   return true;
+}
+
+bool PointCloudDeskewNode::shouldDropOdinSectorPoint(
+  const tf2::Vector3 & point_in_odin_odom, const tf2::Transform & odin_odom_to_odin) const
+{
+  const tf2::Vector3 odin_point = odin_odom_to_odin * point_in_odin_odom;
+  const double x = odin_point.x();
+  const double y = odin_point.y();
+  if (!std::isfinite(x) || !std::isfinite(y)) {
+    return false;
+  }
+
+  const double radius = std::hypot(x, y);
+  if (radius < odin_sector_filter_radius_min_ || radius > odin_sector_filter_radius_) {
+    return false;
+  }
+
+  const double angle = std::atan2(y, x);
+  const double delta = normalizeAngle(angle - odin_sector_filter_angle_center_rad_);
+  return std::fabs(delta) <= odin_sector_filter_angle_half_width_rad_;
 }
 
 bool PointCloudDeskewNode::hasFloat32Field(

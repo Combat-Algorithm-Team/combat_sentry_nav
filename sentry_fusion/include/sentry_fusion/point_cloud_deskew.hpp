@@ -86,7 +86,10 @@ private:
   bool initializeFusionTransforms(const rclcpp::Time & stamp);
   bool appendCloudAsXyzi(
     const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
-    pcl::PointCloud<pcl::PointXYZI> & cloud);
+    pcl::PointCloud<pcl::PointXYZI> & cloud, bool apply_odin_sector_filter = false,
+    const tf2::Transform * odom_to_odin = nullptr);
+  bool shouldDropOdinSectorPoint(
+    const tf2::Vector3 & point_in_odin_odom, const tf2::Transform & odin_odom_to_odin) const;
   bool hasFloat32Field(const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
 
   bool interpolatePose(int64_t stamp_ns, std::size_t & cursor, tf2::Transform & odom_to_base) const;
@@ -136,6 +139,7 @@ private:
   bool base_to_lidar_ready_ = false;
   bool enable_fusion_ = true;
   bool publish_deskewed_cloud_ = false;
+  bool enable_odin_sector_filter_ = false;
   bool fusion_transforms_initialized_ = false;
   int64_t time_offset_ns_ = 0;
   int64_t odom_cache_duration_ns_ = 0;
@@ -145,6 +149,10 @@ private:
   int64_t max_extrapolation_ns_ = 0;
   int64_t last_fused_livox_stamp_ns_ = std::numeric_limits<int64_t>::min();
   double tf_lookup_timeout_sec_ = 0.05;
+  double odin_sector_filter_radius_min_ = 0.0;
+  double odin_sector_filter_radius_ = 0.0;
+  double odin_sector_filter_angle_center_rad_ = 0.0;
+  double odin_sector_filter_angle_half_width_rad_ = 0.0;
   tf2::Transform tf_fusion_base_to_odin_odom_;
   tf2::Transform tf_odin_to_livox_;
 };

@@ -27,6 +27,12 @@ point_cloud_deskew:
     odin_frame: "odin1_base_link"
     livox_frame: "front_mid360"
     fused_output_frame: "odom"
+    # Odin 局部 XY 扇形过滤：0 deg 为 +x，正角朝 +y。
+    enable_odin_sector_filter: False
+    odin_sector_filter_radius_min: 0.0
+    odin_sector_filter_radius: 0.8
+    odin_sector_filter_angle_center_deg: 0.0
+    odin_sector_filter_angle_width_deg: 30.0
     time_offset_sec: 0.0
     odom_cache_duration_sec: 2.0
     fusion_cache_duration_sec: 1.0
@@ -52,8 +58,8 @@ odom_adapter:
 terrain_analysis:
   ros__parameters:
     scanVoxelSize: 0.05                 # 点云下采样
-    decayTime: 0.8                      # 点云时间差阈值；动态障碍离开视野后快速释放历史足迹
-    noDecayDis: 0.8                     # 仅保护车体近盲区历史点，不覆盖整个 4m local map
+    decayTime: 0.5                      # 点云时间差阈值；动态障碍离开视野后快速释放历史足迹
+    noDecayDis: 0.0                     # 仅保护车体近盲区历史点，不覆盖整个 4m local map
     clearingDis: 0.0                    # 该距离外的点会被清除
     useSorting: True                    # 这个参数开起来就能上坡了；如果 use_sorting,那么就以周围点中的分位点作为地面点，否则以最低点作为地面点；周围其余点相对于地面点的高度作为通过代价，所以对于坡面，有的点的代价是正，有的是负，就相互抵消了；不要与 consider_drop 同时开启，计算上会有冲突
     quantileZ: 0.2                      # useful if use_sorting is enabled.
@@ -77,7 +83,7 @@ terrain_analysis:
     minRelZ: -1.5                       # min_rel_z 以及 max_rel_z 限制了有效点云点的Z值范围，用于对天花板和地板进行处理
     maxRelZ: 0.5
     disRatioZ: 0.2                      # Z 值的最大最小范围由这两个值决定，但是并不等于这两个值，是有一个比例关系的，距离机器人越远，限定范围就越大，这其中考虑了坡度
-    bodyFilteringRadius: 0.42           # 车体半径内点云滤除，避免车体反射进入地形代价
+    bodyFilteringRadius: 0.4           # 车体半径内点云滤除，避免车体反射进入地形代价
 
 terrain_analysis_ext:
   ros__parameters:
@@ -98,7 +104,7 @@ terrain_analysis_ext:
     terrainConnThre: 0.5
     ceilingFilteringThre: 2.0
     localTerrainMapRadius: 4.0
-    bodyFilteringRadius: 0.42
+    bodyFilteringRadius: 0.4
 
 cmd_vel_transform:
   ros__parameters:
@@ -116,7 +122,7 @@ terrain_zone_monitor:
     global_frame: map
     robot_base_frame: base_yaw_odom
     footprint_radius: 0.42
-    sample_count: 16
+    sample_count: 8
     update_frequency: 20.0
     marker_publish_frequency: 1.0
     normal_state_id: 0
@@ -159,7 +165,7 @@ pointcloud_to_laserscan:
     target_frame: base_footprint
     min_height: -0.5
     max_height: 6.0
-    min_intensity: 0.1
+    min_intensity: 0.2
     max_intensity: 2.0
     angle_min: -3.1415926                   # -M_PI/2
     angle_max: 3.1415926                    # M_PI/2
@@ -323,14 +329,14 @@ controller_server:
     general_goal_checker:
       stateful: False
       plugin: "nav2_controller::PositionGoalChecker"
-      xy_goal_tolerance: 0.2 
-      path_length_tolerance: 0.5
+      xy_goal_tolerance: 0.1 
+      path_length_tolerance: 0.2
     FollowPath:
       plugin: "goal_approach_controller::GoalApproachController"
       inner_plugin: "nav2_mppi_controller::MPPIController"
-      approach_distance: 2.0  #距目标时开始限速
+      approach_distance: 0.2  #距目标时开始限速
       approach_velocity: 0.8
-      direct_approach_distance: 2.0  #进入直接驱动模式的距离，绕过MPPI防止画弧
+      direct_approach_distance: 0.5  #进入直接驱动模式的距离，绕过MPPI防止画弧
       direct_approach_kp: 3.0  #直接驱动P控制增益
       time_steps: 80  #预测时域2.0s，让MPPI能看到冲过目标的后果
       model_dt: 0.025  #匹配40Hz controller_frequency，避免MPPI配置阶段因控制周期大于模型步长而失败
@@ -455,7 +461,7 @@ local_costmap:
         z_voxels: 16
         min_obstacle_height: -1.0
         max_obstacle_height: 2.0
-        min_obstacle_intensity: 0.1
+        min_obstacle_intensity: 0.2
         max_obstacle_intensity: 2.0
         observation_sources: terrain_map
         terrain_map:
@@ -475,7 +481,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.45
+        inflation_radius: 0.4
       always_send_full_costmap: False
 
 global_costmap:
@@ -534,7 +540,7 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 5.0
-        inflation_radius: 0.75
+        inflation_radius: 0.55
       always_send_full_costmap: False
 
 # The yaml_filename does not need to be specified since it going to be set by defaults in launch.
