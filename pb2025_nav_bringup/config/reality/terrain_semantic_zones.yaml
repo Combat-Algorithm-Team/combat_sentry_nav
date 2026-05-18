@@ -16,12 +16,11 @@
 # - 2: slowdown-only terrain
 # - 255: lethal / no-go terrain
 #
-# The zones below are dimension templates based on the RM2026 V1.4.2 field
-# drawings. They are intentionally disabled until their coordinates are shifted
-# and rotated onto the SLAM map in RViz.
+# The zones below are based on the RM2026 V1.4.2 field drawings and shifted
+# into the fixed-start SLAM map frame.
 #
 # Fortress template:
-# - Center: [0.0, 0.0] in map frame.
+# - Center: [2.700, -0.67472] in map frame.
 # - Outer hexagon: side 1.120 m, flat-to-flat height 1.939 m.
 # - Inner platform: side 0.653 m, flat-to-flat height 1.131 m.
 # - Height 0.150 m, six surrounding ramp faces are about 20 degrees.
@@ -32,7 +31,10 @@
 #
 # Trapezoid highland template:
 # - Local bounding footprint: about 10.505 m x 4.380 m.
-# - The points below use the footprint center as [0.0, 0.0].
+# - The points below keep the left-start orientation from Figure 4-26 and are
+#   calibrated with measured field anchors: left edge x=-0.72610, 23-degree
+#   slope lower edge y=1.97588, highland long edge y=6.82468.
+# - Check /terrain_semantic_markers in RViz before using it for speed limiting.
 # - 43-degree slope is modeled as lethal. 23-degree slopes are traversable
 #   high-cost regions and should also be speed-limited by the lower computer.
 #
@@ -47,92 +49,92 @@ frame_id: map
 
 zones:
   - name: fortress_area
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 175
     state_id: 1
     priority: 55
     polygon:
-      - [-0.560, 0.970]
-      - [0.560, 0.970]
-      - [1.120, 0.000]
-      - [0.560, -0.970]
-      - [-0.560, -0.970]
-      - [-1.120, 0.000]
+      - [2.140, 0.29528]
+      - [3.260, 0.29528]
+      - [3.820, -0.67472]
+      - [3.260, -1.64472]
+      - [2.140, -1.64472]
+      - [1.580, -0.67472]
 
   - name: fortress_slope_intersection_lines
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 235
     state_id: 1
     priority: 80
     line_width: 0.18
     segments:
-      - [[-0.560, 0.970], [-0.327, 0.566]]
-      - [[0.560, 0.970], [0.327, 0.566]]
-      - [[1.120, 0.000], [0.653, 0.000]]
-      - [[0.560, -0.970], [0.327, -0.566]]
-      - [[-0.560, -0.970], [-0.327, -0.566]]
-      - [[-1.120, 0.000], [-0.653, 0.000]]
+      - [[2.140, 0.29528], [2.373, -0.10872]]
+      - [[3.260, 0.29528], [3.027, -0.10872]]
+      - [[3.820, -0.67472], [3.353, -0.67472]]
+      - [[3.260, -1.64472], [3.027, -1.24072]]
+      - [[2.140, -1.64472], [2.373, -1.24072]]
+      - [[1.580, -0.67472], [2.047, -0.67472]]
 
   - name: trapezoid_highland_upper_platform
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 150
     state_id: 1
     priority: 45
     polygon:
-      - [-4.953, 0.732]
-      - [5.253, 0.732]
-      - [5.253, 2.190]
-      - [-4.953, 2.190]
+      - [-0.72610, 5.15339]
+      - [9.47990, 5.15339]
+      - [9.47990, 6.82468]
+      - [-0.72610, 6.82468]
 
   - name: trapezoid_highland_lower_platform
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 150
     state_id: 1
     priority: 45
     polygon:
-      - [-4.953, -2.040]
-      - [-2.892, -2.040]
-      - [-2.892, -0.690]
-      - [-4.103, -0.690]
-      - [-4.103, 0.732]
-      - [-4.953, 0.732]
+      - [-0.72610, 1.97588]
+      - [1.33490, 1.97588]
+      - [1.33490, 3.52337]
+      - [0.12390, 3.52337]
+      - [0.12390, 5.15339]
+      - [-0.72610, 5.15339]
 
   - name: trapezoid_highland_23deg_main_slope
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 195
     state_id: 1
     priority: 60
     polygon:
-      - [-2.892, -2.040]
-      - [-0.813, -2.040]
-      - [1.455, 0.732]
-      - [0.355, 0.732]
+      - [1.33490, 1.97588]
+      - [3.41390, 1.97588]
+      - [5.68190, 5.15339]
+      - [4.58190, 5.15339]
 
   - name: trapezoid_highland_23deg_right_edge
-    enabled: false
+    enabled: true
     type: high_cost
     cost: 190
     state_id: 1
     priority: 60
     polygon:
-      - [3.700, 0.732]
-      - [4.781, 0.732]
-      - [4.781, 1.735]
-      - [3.700, 1.735]
+      - [7.92690, 5.15339]
+      - [9.00790, 5.15339]
+      - [9.00790, 6.30312]
+      - [7.92690, 6.30312]
 
   - name: trapezoid_highland_43deg_slope
-    enabled: false
+    enabled: true
     type: lethal
     cost: 254
     state_id: 255
     priority: 100
     polygon:
-      - [-4.953, -2.040]
-      - [-3.401, -2.040]
-      - [-3.401, -0.540]
-      - [-4.953, -0.540]
+      - [-0.72610, 1.97588]
+      - [0.82590, 1.97588]
+      - [0.82590, 3.69531]
+      - [-0.72610, 3.69531]
