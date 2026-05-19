@@ -28,7 +28,6 @@
 #include "pcl/point_types.h"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
-#include "sensor_msgs/msg/point_field.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_ros/buffer.h"
@@ -70,8 +69,7 @@ private:
     const sensor_msgs::msg::PointCloud2 & input, sensor_msgs::msg::PointCloud2 & output,
     tf2::Transform & target_odom_to_base);
   bool lookupBaseToLidar(
-    const sensor_msgs::msg::PointCloud2 & cloud, tf2::Transform & base_to_lidar,
-    std::string & lidar_frame);
+    const sensor_msgs::msg::PointCloud2 & cloud, tf2::Transform & base_to_lidar);
 
   void storeDeskewedCloud(
     sensor_msgs::msg::PointCloud2 && cloud, const tf2::Transform & target_odom_to_base);
@@ -86,19 +84,14 @@ private:
     sensor_msgs::msg::PointCloud2 & fused_cloud);
   bool initializeFusionTransforms(const rclcpp::Time & stamp);
   bool resolveOdinRawCloudTransform(
-    const sensor_msgs::msg::PointCloud2 & odin_cloud, tf2::Transform & cloud_to_fused_output,
-    tf2::Transform & cloud_to_odin_frame);
-  bool appendCloudAsXyzi(
+    const sensor_msgs::msg::PointCloud2 & odin_cloud, tf2::Transform & cloud_to_fused_output);
+  bool appendLivoxCloudAsXyzi(
     const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
-    pcl::PointCloud<pcl::PointXYZI> & cloud, bool apply_odin_sector_filter = false,
-    const tf2::Transform * cloud_to_odin_frame = nullptr);
-  bool shouldDropOdinSectorPoint(
-    const tf2::Vector3 & point_in_cloud_frame, const tf2::Transform & cloud_to_odin_frame) const;
-  const sensor_msgs::msg::PointField * findField(
-    const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
-  bool hasFloat32Field(const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
-  float readIntensity(
-    const std::uint8_t * point_data, const sensor_msgs::msg::PointField * intensity_field) const;
+    pcl::PointCloud<pcl::PointXYZI> & cloud);
+  bool appendOdinCloudAsXyzi(
+    const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
+    pcl::PointCloud<pcl::PointXYZI> & cloud);
+  bool shouldDropOdinSectorPoint(const tf2::Vector3 & point_in_base_frame) const;
 
   bool interpolatePose(int64_t stamp_ns, std::size_t & cursor, tf2::Transform & odom_to_base) const;
   bool interpolateBetween(
@@ -113,6 +106,7 @@ private:
   int64_t readPointTimeNs(const std::uint8_t * point_data) const;
 
   bool validateCloudLayout(const sensor_msgs::msg::PointCloud2 & cloud);
+  bool validateOdinCloudLayout(const sensor_msgs::msg::PointCloud2 & cloud);
 
   int64_t messageTimeToNanoseconds(const builtin_interfaces::msg::Time & stamp) const;
   builtin_interfaces::msg::Time nanosecondsToMessageTime(int64_t stamp_ns) const;
@@ -138,10 +132,7 @@ private:
   std::string odom_topic_;
   std::string base_frame_;
   std::string lidar_frame_;
-  std::string output_frame_;
   std::string fusion_base_frame_;
-  std::string odin_frame_;
-  std::string livox_frame_;
   std::string fused_output_frame_;
 
   bool base_to_lidar_ready_ = false;
@@ -162,7 +153,6 @@ private:
   double odin_sector_filter_angle_center_rad_ = 0.0;
   double odin_sector_filter_angle_half_width_rad_ = 0.0;
   tf2::Transform tf_fusion_base_to_odin_odom_;
-  tf2::Transform tf_odin_to_livox_;
 };
 
 }  // namespace sentry_fusion
