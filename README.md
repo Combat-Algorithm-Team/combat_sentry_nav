@@ -22,7 +22,7 @@ https://github.com/user-attachments/assets/ae4c19a0-4c73-46a0-95bd-909734da2a42
 
     本项目大幅优化了坐标变换逻辑，考虑雷达原点 `lidar_odom` 与 底盘原点 `odom` 之间的隐式变换。
 
-    当前实车链路使用 [odin_ros_driver](./odin_ros_driver/) 与 [livox_ros_driver2](./livox_ros_driver2/) 输入点云和里程计，由 [sentry_fusion](./sentry_fusion/) 完成 Livox 点云去畸变、Odin/Livox 点云融合与里程计适配，并发布 `registered_scan`、`lidar_odometry` 和 `odometry`。`terrain_analysis` / `terrain_analysis_ext` 消费 `registered_scan` 生成 `terrain_map` / `terrain_map_ext`，供 Nav2 代价地图和 SLAM 使用。
+    当前实车链路使用 [odin_ros_driver](./odin_ros_driver/) 的 `odin1/cloud_raw` 与 [livox_ros_driver2](./livox_ros_driver2/) 的 Livox 点云输入，由 [sentry_fusion](./sentry_fusion/) 完成 Livox 点云去畸变、Odin raw/Livox 点云融合与里程计适配，并发布 `registered_scan`、`lidar_odometry` 和 `odometry`。`terrain_analysis` / `terrain_analysis_ext` 消费 `registered_scan` 生成 `terrain_map` / `terrain_map_ext`，供 Nav2 代价地图和 SLAM 使用。
 
     ![frames_2025_03_26](https://raw.githubusercontent.com/LihanChen2004/picx-images-hosting/master/frames_2025_03_26.67xmq3djvx.webp)
 

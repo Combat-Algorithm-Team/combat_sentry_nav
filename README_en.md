@@ -22,7 +22,7 @@ This project is based on the [NAV2 Navigation Framework](https://github.com/ros-
 
     This project has optimized coordinate transformation logic significantly, considering the implicit transformation between the radar origin `lidar_odom` and the chassis origin `odom`.
 
-    The current physical-robot pipeline uses [odin_ros_driver](./odin_ros_driver/) and [livox_ros_driver2](./livox_ros_driver2/) for point cloud and odometry input. [sentry_fusion](./sentry_fusion/) deskews the Livox cloud, fuses Odin/Livox point clouds, adapts odometry, and publishes `registered_scan`, `lidar_odometry`, and `odometry`. `terrain_analysis` / `terrain_analysis_ext` consume `registered_scan` and generate `terrain_map` / `terrain_map_ext` for Nav2 costmaps and SLAM.
+    The current physical-robot pipeline uses `odin1/cloud_raw` from [odin_ros_driver](./odin_ros_driver/) and the Livox cloud from [livox_ros_driver2](./livox_ros_driver2/). [sentry_fusion](./sentry_fusion/) deskews the Livox cloud, fuses Odin raw/Livox point clouds, adapts odometry, and publishes `registered_scan`, `lidar_odometry`, and `odometry`. `terrain_analysis` / `terrain_analysis_ext` consume `registered_scan` and generate `terrain_map` / `terrain_map_ext` for Nav2 costmaps and SLAM.
 
     ![frames_2025_03_26](https://raw.githubusercontent.com/LihanChen2004/picx-images-hosting/master/frames_2025_03_26.67xmq3djvx.webp)
 

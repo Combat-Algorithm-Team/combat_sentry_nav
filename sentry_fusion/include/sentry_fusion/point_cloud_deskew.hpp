@@ -28,6 +28,7 @@
 #include "pcl/point_types.h"
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
+#include "sensor_msgs/msg/point_field.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2/LinearMath/Transform.h"
 #include "tf2_ros/buffer.h"
@@ -84,13 +85,20 @@ private:
     const sensor_msgs::msg::PointCloud2 & odin_cloud, const tf2::Transform & target_odom_to_base,
     sensor_msgs::msg::PointCloud2 & fused_cloud);
   bool initializeFusionTransforms(const rclcpp::Time & stamp);
+  bool resolveOdinRawCloudTransform(
+    const sensor_msgs::msg::PointCloud2 & odin_cloud, tf2::Transform & cloud_to_fused_output,
+    tf2::Transform & cloud_to_odin_frame);
   bool appendCloudAsXyzi(
     const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
     pcl::PointCloud<pcl::PointXYZI> & cloud, bool apply_odin_sector_filter = false,
-    const tf2::Transform * odom_to_odin = nullptr);
+    const tf2::Transform * cloud_to_odin_frame = nullptr);
   bool shouldDropOdinSectorPoint(
-    const tf2::Vector3 & point_in_odin_odom, const tf2::Transform & odin_odom_to_odin) const;
+    const tf2::Vector3 & point_in_cloud_frame, const tf2::Transform & cloud_to_odin_frame) const;
+  const sensor_msgs::msg::PointField * findField(
+    const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
   bool hasFloat32Field(const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const;
+  float readIntensity(
+    const std::uint8_t * point_data, const sensor_msgs::msg::PointField * intensity_field) const;
 
   bool interpolatePose(int64_t stamp_ns, std::size_t & cursor, tf2::Transform & odom_to_base) const;
   bool interpolateBetween(

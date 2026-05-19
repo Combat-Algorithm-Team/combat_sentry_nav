@@ -83,7 +83,7 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("output_cloud_topic", "livox/lidar_deskewed");
   this->declare_parameter<bool>("publish_deskewed_cloud", false);
   this->declare_parameter<bool>("enable_fusion", true);
-  this->declare_parameter<std::string>("odin_cloud_topic", "odin1/cloud_slam");
+  this->declare_parameter<std::string>("odin_cloud_topic", "odin1/cloud_raw");
   this->declare_parameter<std::string>("fused_cloud_topic", "registered_scan");
   this->declare_parameter<std::string>("odom_topic", "odin1/odometry_highfreq");
   this->declare_parameter<std::string>("base_frame", "odin1_base_link");
@@ -93,11 +93,11 @@ PointCloudDeskewNode::PointCloudDeskewNode(const rclcpp::NodeOptions & options)
   this->declare_parameter<std::string>("odin_frame", "odin1_base_link");
   this->declare_parameter<std::string>("livox_frame", "front_mid360");
   this->declare_parameter<std::string>("fused_output_frame", "odom");
-  this->declare_parameter<bool>("enable_odin_sector_filter", false);
+  this->declare_parameter<bool>("enable_odin_sector_filter", true);
   this->declare_parameter<double>("odin_sector_filter_radius_min", 0.0);
-  this->declare_parameter<double>("odin_sector_filter_radius", 0.0);
+  this->declare_parameter<double>("odin_sector_filter_radius", 0.8);
   this->declare_parameter<double>("odin_sector_filter_angle_center_deg", 0.0);
-  this->declare_parameter<double>("odin_sector_filter_angle_width_deg", 0.0);
+  this->declare_parameter<double>("odin_sector_filter_angle_width_deg", 180.0);
   this->declare_parameter<double>("time_offset_sec", 0.0);
   this->declare_parameter<double>("odom_cache_duration_sec", 2.0);
   this->declare_parameter<double>("fusion_cache_duration_sec", 1.0);
@@ -462,6 +462,12 @@ bool PointCloudDeskewNode::fuseClouds(
 
   const tf2::Transform tf_fusion_base_to_livox =
     tf_fusion_base_to_odin_odom_ * target_odom_to_base * tf_odin_to_livox_;
+  tf2::Transform tf_odin_cloud_to_fused_output;
+  tf2::Transform tf_odin_cloud_to_odin_frame;
+  if (!resolveOdinRawCloudTransform(
+        odin_cloud, tf_odin_cloud_to_fused_output, tf_odin_cloud_to_odin_frame)) {
+    return false;
+  }
 
   pcl::PointCloud<pcl::PointXYZI> fused_pcl;
   fused_pcl.points.reserve(
@@ -470,8 +476,8 @@ bool PointCloudDeskewNode::fuseClouds(
 
   const bool has_livox = appendCloudAsXyzi(livox_cloud, tf_fusion_base_to_livox, fused_pcl);
   const bool has_odin = appendCloudAsXyzi(
-    odin_cloud, tf_fusion_base_to_odin_odom_, fused_pcl, enable_odin_sector_filter_,
-    &target_odom_to_base);
+    odin_cloud, tf_odin_cloud_to_fused_output, fused_pcl, enable_odin_sector_filter_,
+    &tf_odin_cloud_to_odin_frame);
   if (!has_livox && !has_odin) {
     return false;
   }
@@ -511,10 +517,39 @@ bool PointCloudDeskewNode::initializeFusionTransforms(const rclcpp::Time & stamp
   return true;
 }
 
+bool PointCloudDeskewNode::resolveOdinRawCloudTransform(
+  const sensor_msgs::msg::PointCloud2 & odin_cloud, tf2::Transform & cloud_to_fused_output,
+  tf2::Transform & cloud_to_odin_frame)
+{
+  const std::string cloud_frame = odin_cloud.header.frame_id;
+  if (cloud_frame != odin_frame_) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Skip Odin raw cloud from frame '%s': expected frame '%s'.", cloud_frame.c_str(),
+      odin_frame_.c_str());
+    return false;
+  }
+
+  const int64_t stamp_ns = messageTimeToNanoseconds(odin_cloud.header.stamp);
+  std::size_t cursor = 1U;
+  tf2::Transform odin_odom_to_odin;
+  if (stamp_ns <= 0 || !interpolatePose(stamp_ns, cursor, odin_odom_to_odin)) {
+    RCLCPP_WARN_THROTTLE(
+      this->get_logger(), *this->get_clock(), 1000,
+      "Skip Odin raw cloud: timestamp %.6f is outside the odometry cache.",
+      static_cast<double>(stamp_ns) / K_NANOSECONDS_PER_SECOND);
+    return false;
+  }
+
+  cloud_to_fused_output = tf_fusion_base_to_odin_odom_ * odin_odom_to_odin;
+  cloud_to_odin_frame.setIdentity();
+  return true;
+}
+
 bool PointCloudDeskewNode::appendCloudAsXyzi(
   const sensor_msgs::msg::PointCloud2 & msg, const tf2::Transform & transform,
   pcl::PointCloud<pcl::PointXYZI> & cloud, bool apply_odin_sector_filter,
-  const tf2::Transform * odom_to_odin)
+  const tf2::Transform * cloud_to_odin_frame)
 {
   if (!hasFloat32Field(msg, "x") || !hasFloat32Field(msg, "y") || !hasFloat32Field(msg, "z")) {
     RCLCPP_WARN_THROTTLE(
@@ -526,54 +561,19 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
   sensor_msgs::PointCloud2ConstIterator<float> iter_x(msg, "x");
   sensor_msgs::PointCloud2ConstIterator<float> iter_y(msg, "y");
   sensor_msgs::PointCloud2ConstIterator<float> iter_z(msg, "z");
-  const bool has_intensity = hasFloat32Field(msg, "intensity");
+  const auto * intensity_field = findField(msg, "intensity");
   const std::size_t point_count =
     static_cast<std::size_t>(msg.width) * static_cast<std::size_t>(msg.height);
-  const bool use_odin_sector_filter = apply_odin_sector_filter && odom_to_odin != nullptr;
-  tf2::Transform odin_odom_to_odin;
+  const bool use_odin_sector_filter = apply_odin_sector_filter && cloud_to_odin_frame != nullptr;
+  tf2::Transform source_to_odin_frame;
   if (use_odin_sector_filter) {
-    odin_odom_to_odin = odom_to_odin->inverse();
+    source_to_odin_frame = *cloud_to_odin_frame;
   }
   std::size_t dropped_sector_points = 0U;
 
-  if (has_intensity) {
-    sensor_msgs::PointCloud2ConstIterator<float> iter_intensity(msg, "intensity");
-    for (std::size_t i = 0; i < point_count; ++i) {
-      const tf2::Vector3 source_point(*iter_x, *iter_y, *iter_z);
-      if (use_odin_sector_filter && shouldDropOdinSectorPoint(source_point, odin_odom_to_odin)) {
-        ++dropped_sector_points;
-        ++iter_x;
-        ++iter_y;
-        ++iter_z;
-        ++iter_intensity;
-        continue;
-      }
-
-      const tf2::Vector3 point = transform * source_point;
-      if (std::isfinite(point.x()) && std::isfinite(point.y()) && std::isfinite(point.z())) {
-        pcl::PointXYZI output_point;
-        output_point.x = static_cast<float>(point.x());
-        output_point.y = static_cast<float>(point.y());
-        output_point.z = static_cast<float>(point.z());
-        output_point.intensity = std::isfinite(*iter_intensity) ? *iter_intensity : 0.0F;
-        cloud.points.push_back(output_point);
-      }
-
-      ++iter_x;
-      ++iter_y;
-      ++iter_z;
-      ++iter_intensity;
-    }
-    if (dropped_sector_points > 0U) {
-      RCLCPP_DEBUG(
-        this->get_logger(), "Dropped %zu Odin points by sector filter.", dropped_sector_points);
-    }
-    return true;
-  }
-
   for (std::size_t i = 0; i < point_count; ++i) {
     const tf2::Vector3 source_point(*iter_x, *iter_y, *iter_z);
-    if (use_odin_sector_filter && shouldDropOdinSectorPoint(source_point, odin_odom_to_odin)) {
+    if (use_odin_sector_filter && shouldDropOdinSectorPoint(source_point, source_to_odin_frame)) {
       ++dropped_sector_points;
       ++iter_x;
       ++iter_y;
@@ -587,7 +587,7 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
       output_point.x = static_cast<float>(point.x());
       output_point.y = static_cast<float>(point.y());
       output_point.z = static_cast<float>(point.z());
-      output_point.intensity = 0.0F;
+      output_point.intensity = readIntensity(pointData(msg, i), intensity_field);
       cloud.points.push_back(output_point);
     }
 
@@ -604,9 +604,9 @@ bool PointCloudDeskewNode::appendCloudAsXyzi(
 }
 
 bool PointCloudDeskewNode::shouldDropOdinSectorPoint(
-  const tf2::Vector3 & point_in_odin_odom, const tf2::Transform & odin_odom_to_odin) const
+  const tf2::Vector3 & point_in_cloud_frame, const tf2::Transform & cloud_to_odin_frame) const
 {
-  const tf2::Vector3 odin_point = odin_odom_to_odin * point_in_odin_odom;
+  const tf2::Vector3 odin_point = cloud_to_odin_frame * point_in_cloud_frame;
   const double x = odin_point.x();
   const double y = odin_point.y();
   if (!std::isfinite(x) || !std::isfinite(y)) {
@@ -623,15 +623,63 @@ bool PointCloudDeskewNode::shouldDropOdinSectorPoint(
   return std::fabs(delta) <= odin_sector_filter_angle_half_width_rad_;
 }
 
-bool PointCloudDeskewNode::hasFloat32Field(
+const sensor_msgs::msg::PointField * PointCloudDeskewNode::findField(
   const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const
 {
   for (const auto & field : msg.fields) {
-    if (field.name == name && field.datatype == sensor_msgs::msg::PointField::FLOAT32) {
-      return true;
+    if (field.name == name) {
+      return &field;
     }
   }
-  return false;
+  return nullptr;
+}
+
+bool PointCloudDeskewNode::hasFloat32Field(
+  const sensor_msgs::msg::PointCloud2 & msg, const std::string & name) const
+{
+  const auto * field = findField(msg, name);
+  return field != nullptr && field->datatype == sensor_msgs::msg::PointField::FLOAT32;
+}
+
+float PointCloudDeskewNode::readIntensity(
+  const std::uint8_t * point_data, const sensor_msgs::msg::PointField * intensity_field) const
+{
+  if (intensity_field == nullptr || intensity_field->count == 0U) {
+    return 0.0F;
+  }
+
+  const std::uint32_t offset = intensity_field->offset;
+  double value = 0.0;
+  switch (intensity_field->datatype) {
+    case sensor_msgs::msg::PointField::INT8:
+      value = static_cast<double>(readScalar<std::int8_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::UINT8:
+      value = static_cast<double>(readScalar<std::uint8_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::INT16:
+      value = static_cast<double>(readScalar<std::int16_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::UINT16:
+      value = static_cast<double>(readScalar<std::uint16_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::INT32:
+      value = static_cast<double>(readScalar<std::int32_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::UINT32:
+      value = static_cast<double>(readScalar<std::uint32_t>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::FLOAT32:
+      value = static_cast<double>(readScalar<float>(point_data, offset));
+      break;
+    case sensor_msgs::msg::PointField::FLOAT64:
+      value = readScalar<double>(point_data, offset);
+      break;
+    default:
+      return 0.0F;
+  }
+
+  return std::isfinite(value) ? static_cast<float>(value) : 0.0F;
 }
 
 bool PointCloudDeskewNode::lookupBaseToLidar(

@@ -6,7 +6,7 @@ point_cloud_deskew:
     output_cloud_topic: "livox/lidar_deskewed"
     publish_deskewed_cloud: false
     enable_fusion: true
-    odin_cloud_topic: "odin1/cloud_slam"
+    odin_cloud_topic: "odin1/cloud_raw"
     fused_cloud_topic: "registered_scan"
     odom_topic: "odin1/odometry_highfreq"
 
@@ -18,11 +18,11 @@ point_cloud_deskew:
     livox_frame: "front_mid360"
     fused_output_frame: "odom"
     # Odin local XY fan filter: 0 deg is +x, positive angle turns toward +y.
-    enable_odin_sector_filter: false
+    enable_odin_sector_filter: true
     odin_sector_filter_radius_min: 0.0
     odin_sector_filter_radius: 0.8
     odin_sector_filter_angle_center_deg: 0.0
-    odin_sector_filter_angle_width_deg: 30.0
+    odin_sector_filter_angle_width_deg: 180.0
 
     # All time parameters below use seconds.
     time_offset_sec: 0.0                 # LiDAR point timestamp offset.

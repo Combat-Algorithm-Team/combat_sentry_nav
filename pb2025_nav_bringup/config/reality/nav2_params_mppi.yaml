@@ -17,7 +17,7 @@ point_cloud_deskew:
     output_cloud_topic: "livox/lidar_deskewed"
     publish_deskewed_cloud: False
     enable_fusion: True
-    odin_cloud_topic: "odin1/cloud_slam"
+    odin_cloud_topic: "odin1/cloud_raw"
     fused_cloud_topic: "registered_scan"
     odom_topic: "odin1/odometry_highfreq"
     base_frame: "odin1_base_link"
@@ -28,11 +28,11 @@ point_cloud_deskew:
     livox_frame: "front_mid360"
     fused_output_frame: "odom"
     # Odin 局部 XY 扇形过滤：0 deg 为 +x，正角朝 +y。
-    enable_odin_sector_filter: False
+    enable_odin_sector_filter: True
     odin_sector_filter_radius_min: 0.0
     odin_sector_filter_radius: 0.8
     odin_sector_filter_angle_center_deg: 0.0
-    odin_sector_filter_angle_width_deg: 60.0
+    odin_sector_filter_angle_width_deg: 180.0
     time_offset_sec: 0.0
     odom_cache_duration_sec: 2.0
     fusion_cache_duration_sec: 1.0
