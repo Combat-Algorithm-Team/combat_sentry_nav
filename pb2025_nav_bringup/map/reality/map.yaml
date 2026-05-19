@@ -1,6 +1,6 @@
-image: rmuc2026.png
+image: map.png
 mode: trinary
-resolution: 0.050000
+resolution: 0.100000
 origin: [-4.774521, -8.73076658, 0.000000]
 negate: 0
 occupied_thresh: 0.650000
