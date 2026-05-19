@@ -8,12 +8,12 @@
 # Zone types:
 # - high_cost: traversable but avoided by normal planning. Use for fortress/highland tops.
 # - slowdown: traversable and reported to the lower computer for speed limiting.
-# - lethal: obstacle. Use for the 43-degree highland slope and any no-go ramp face.
+# - lethal: obstacle. Use for any no-go terrain.
 #
-# state_id convention for /sentry_terrain_state:
+# state_id convention for /cmd_terrain_state:
 # - 0: normal
-# - 1: high_cost terrain such as fortress/highland
-# - 2: slowdown-only terrain
+# - 1: fortress and trapezoid highland terrain
+# - 2: undulating terrain / slowdown-only traversable segments
 # - 255: lethal / no-go terrain
 #
 # The zones below are based on the RM2026 V1.4.2 field drawings and shifted
@@ -29,14 +29,22 @@
 #   intersection lines remain separate with higher cost to bias paths toward the
 #   center of each ramp face.
 #
-# Trapezoid highland template:
-# - Local bounding footprint: about 10.505 m x 4.380 m.
-# - The points below keep the left-start orientation from Figure 4-26 and are
-#   calibrated with measured field anchors: left edge x=-0.72610, 23-degree
-#   slope lower edge y=1.97588, highland long edge y=6.82468.
+# Undulating road segments:
+# - The segment center lines match the RMUC2026 behavior-tree before/after goals.
+# - They publish state_id=2 on /cmd_terrain_state for lower-computer terrain
+#   handling while leaving fortress and trapezoid highland areas at state_id=1.
+# - Each segment is named directly instead of relying on generated _0/_1 suffixes.
+#
+# Trapezoid highland area:
+# - This is a single semantic footprint for the annotated RMUC2026 trapezoid
+#   highland instead of separate upper/lower/slope subregions.
+# - The points below keep the measured anchors from the previous calibration:
+#   left edge x=-0.72610, 23-degree slope lower edge y=1.97588, and highland
+#   upper edge y=6.82468.
+# - The inner bend is fitted to the rmuc2026.png obstacle edge at about
+#   pixel (213, 35), so the adjacent horizontal edge overlays the obstacle
+#   boundary instead of floating below it.
 # - Check /terrain_semantic_markers in RViz before using it for speed limiting.
-# - 43-degree slope is modeled as lethal. 23-degree slopes are traversable
-#   high-cost regions and should also be speed-limited by the lower computer.
 #
 # Narrow high-cost lines can be written as:
 #   line: [[x0, y0], [x1, y1]]
@@ -77,64 +85,34 @@ zones:
       - [[2.140, -1.64472], [2.373, -1.24072]]
       - [[1.580, -0.67472], [2.047, -0.67472]]
 
-  - name: trapezoid_highland_upper_platform
+  - name: ally_undulating_road_segment
+    enabled: true
+    type: slowdown
+    cost: 0
+    state_id: 2
+    priority: 70
+    line_width: 2.00
+    line: [[-0.100, -7.086], [6.458, -7.086]]
+
+  - name: enemy_undulating_road_segment
+    enabled: true
+    type: slowdown
+    cost: 0
+    state_id: 2
+    priority: 70
+    line_width: 2.00
+    line: [[13.675, 5.805], [20.291, 5.805]]
+
+  - name: trapezoid_highland
     enabled: true
     type: high_cost
-    cost: 150
+    cost: 175
     state_id: 1
-    priority: 45
+    priority: 60
     polygon:
-      - [-0.72610, 5.15339]
-      - [9.47990, 5.15339]
-      - [9.47990, 6.82468]
       - [-0.72610, 6.82468]
-
-  - name: trapezoid_highland_lower_platform
-    enabled: true
-    type: high_cost
-    cost: 150
-    state_id: 1
-    priority: 45
-    polygon:
-      - [-0.72610, 1.97588]
-      - [1.33490, 1.97588]
-      - [1.33490, 3.52337]
-      - [0.12390, 3.52337]
-      - [0.12390, 5.15339]
-      - [-0.72610, 5.15339]
-
-  - name: trapezoid_highland_23deg_main_slope
-    enabled: true
-    type: high_cost
-    cost: 195
-    state_id: 1
-    priority: 60
-    polygon:
-      - [1.33490, 1.97588]
+      - [9.47990, 6.82468]
+      - [9.47990, 5.56923]
+      - [5.87548, 5.56923]
       - [3.41390, 1.97588]
-      - [5.68190, 5.15339]
-      - [4.58190, 5.15339]
-
-  - name: trapezoid_highland_23deg_right_edge
-    enabled: true
-    type: high_cost
-    cost: 190
-    state_id: 1
-    priority: 60
-    polygon:
-      - [7.92690, 5.15339]
-      - [9.00790, 5.15339]
-      - [9.00790, 6.30312]
-      - [7.92690, 6.30312]
-
-  - name: trapezoid_highland_43deg_slope
-    enabled: true
-    type: lethal
-    cost: 254
-    state_id: 255
-    priority: 100
-    polygon:
       - [-0.72610, 1.97588]
-      - [0.82590, 1.97588]
-      - [0.82590, 3.69531]
-      - [-0.72610, 3.69531]

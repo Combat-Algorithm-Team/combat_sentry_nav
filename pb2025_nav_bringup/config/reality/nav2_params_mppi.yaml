@@ -126,7 +126,7 @@ terrain_zone_monitor:
     update_frequency: 20.0
     marker_publish_frequency: 1.0
     normal_state_id: 0
-    state_topic: /sentry_terrain_state
+    state_topic: /cmd_terrain_state
     state_name_topic: /sentry_terrain_zone_name
     marker_topic: /terrain_semantic_markers
     publish_markers: False

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1232" height="442" viewBox="0 0 1232 442">
+<title>rmuc2026 terrain and behavior-tree goal annotations</title>
+<defs><style>.leader{fill:none;stroke:#0f172a;stroke-width:1.2;stroke-linecap:round;opacity:.85}.goal-ring{stroke:#111827;stroke-width:1.4}.goal-dot{fill:#111827}.goal-label-bg{fill:rgba(255,255,255,.9);stroke:#111827;stroke-width:.8}.goal-label{font:700 8.5px Menlo,Consolas,monospace;fill:#0f172a}.zone-label-bg{fill:rgba(15,23,42,.78);stroke:rgba(255,255,255,.38);stroke-width:.6}.zone-label{font:700 8px Menlo,Consolas,monospace;fill:#f8fafc}.legend-title{font:700 14px Menlo,Consolas,monospace;fill:#f8fafc}.legend-heading{font:700 11px Menlo,Consolas,monospace;fill:#e5e7eb}.legend-text{font:9.5px Menlo,Consolas,monospace;fill:#d1d5db}.legend-subtle{font:8.5px Menlo,Consolas,monospace;fill:#94a3b8}</style></defs>
+<rect width="100%" height="100%" fill="#111827"/><g transform="translate(16,16)"><image href="rmuc2026.png" x="0" y="0" width="596.0" height="321.0" preserveAspectRatio="none"/><rect x="0.5" y="0.5" width="595.0" height="320.0" fill="none" stroke="#334155" stroke-width="1"/>
+<polygon points="138.29,140.48 160.69,140.48 171.89,159.88 160.69,179.28 138.29,179.28 127.09,159.88" fill="#38bdf8" fill-opacity="0.30" stroke="#075985" stroke-width="2"/>
+<rect class="zone-label-bg" x="104.84" y="152.88" width="89.3" height="16" rx="3"/>
+<text class="zone-label" x="109.84" y="163.88">fortress_area</text>
+<line x1="138.29" y1="140.48" x2="142.95" y2="148.56" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="138.29" y1="140.48" x2="142.95" y2="148.56" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<line x1="160.69" y1="140.48" x2="156.03" y2="148.56" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="160.69" y1="140.48" x2="156.03" y2="148.56" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<line x1="171.89" y1="159.88" x2="162.55" y2="159.88" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="171.89" y1="159.88" x2="162.55" y2="159.88" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<line x1="160.69" y1="179.28" x2="156.03" y2="171.2" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="160.69" y1="179.28" x2="156.03" y2="171.2" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<line x1="138.29" y1="179.28" x2="142.95" y2="171.2" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="138.29" y1="179.28" x2="142.95" y2="171.2" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<line x1="127.09" y1="159.88" x2="136.43" y2="159.88" stroke="#a855f7" stroke-opacity="0.50" stroke-width="3.6" stroke-linecap="butt"/>
+<line x1="127.09" y1="159.88" x2="136.43" y2="159.88" stroke="#581c87" stroke-width="1.4" stroke-linecap="round"/>
+<rect class="zone-label-bg" x="83.49" y="152.88" width="132.0" height="16" rx="3"/>
+<text class="zone-label" x="88.49" y="163.88">fortress_slope_lines</text>
+<line x1="93.49" y1="288.1" x2="224.65" y2="288.1" stroke="#facc15" stroke-opacity="0.50" stroke-width="40.0" stroke-linecap="butt"/>
+<line x1="93.49" y1="288.1" x2="224.65" y2="288.1" stroke="#a16207" stroke-width="2" stroke-linecap="butt"/>
+<rect class="zone-label-bg" x="68.67" y="281.1" width="180.8" height="16" rx="3"/>
+<text class="zone-label" x="73.67" y="292.1">ally_undulating_road_segment</text>
+<line x1="368.99" y1="30.28" x2="501.31" y2="30.28" stroke="#facc15" stroke-opacity="0.50" stroke-width="40.0" stroke-linecap="butt"/>
+<line x1="368.99" y1="30.28" x2="501.31" y2="30.28" stroke="#a16207" stroke-width="2" stroke-linecap="butt"/>
+<rect class="zone-label-bg" x="341.7" y="23.28" width="186.9" height="16" rx="3"/>
+<text class="zone-label" x="346.7" y="34.28">enemy_undulating_road_segment</text>
+<polygon points="80.97,9.89 285.09,9.89 285.09,35.0 213.0,35.0 163.77,106.87 80.97,106.87" fill="#ef4444" fill-opacity="0.30" stroke="#991b1b" stroke-width="2"/>
+<rect class="zone-label-bg" x="124.91" y="43.59" width="119.8" height="16" rx="3"/>
+<text class="zone-label" x="129.91" y="54.59">trapezoid_highland</text>
+<line class="leader" x1="75.43" y1="298.84" x2="131.13" y2="286.84"/>
+<circle class="goal-ring" cx="75.43" cy="298.84" r="6.3" fill="#22c55e"/><circle class="goal-dot" cx="75.43" cy="298.84" r="2.2"/>
+<rect class="goal-label-bg" x="83.43" y="272.84" width="95.4" height="29" rx="4"/>
+<text class="goal-label" x="88.43" y="283.84"><tspan x="88.43">G01</tspan><tspan x="88.43" dy="11">(-1.00, -7.62)</tspan></text>
+<line class="leader" x1="255.01" y1="55.38" x2="308.61" y2="59.38"/>
+<circle class="goal-ring" cx="255.01" cy="55.38" r="6.3" fill="#f472b6"/><circle class="goal-dot" cx="255.01" cy="55.38" r="2.2"/>
+<rect class="goal-label-bg" x="267.01" y="45.38" width="83.2" height="29" rx="4"/>
+<text class="goal-label" x="272.01" y="56.38"><tspan x="272.01">G02</tspan><tspan x="272.01" dy="11">(7.98, 4.55)</tspan></text>
+<line class="leader" x1="177.81" y1="41.84" x2="131.41" y2="37.84"/>
+<circle class="goal-ring" cx="177.81" cy="41.84" r="6.3" fill="#ef4444"/><circle class="goal-dot" cx="177.81" cy="41.84" r="2.2"/>
+<rect class="goal-label-bg" x="89.81" y="23.84" width="83.2" height="29" rx="4"/>
+<text class="goal-label" x="94.81" y="34.84"><tspan x="94.81">G03</tspan><tspan x="94.81" dy="11">(4.12, 5.23)</tspan></text>
+<line class="leader" x1="175.09" y1="248.9" x2="231.74" y2="232.9"/>
+<circle class="goal-ring" cx="175.09" cy="248.9" r="6.3" fill="#facc15"/><circle class="goal-dot" cx="175.09" cy="248.9" r="2.2"/>
+<rect class="goal-label-bg" x="187.09" y="218.9" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="192.09" y="229.9"><tspan x="192.09">G04</tspan><tspan x="192.09" dy="11">(3.98, -5.13)</tspan></text>
+<line class="leader" x1="106.31" y1="288.1" x2="54.96" y2="274.1"/>
+<circle class="goal-ring" cx="106.31" cy="288.1" r="6.3" fill="#facc15"/><circle class="goal-dot" cx="106.31" cy="288.1" r="2.2"/>
+<rect class="goal-label-bg" x="10.31" y="260.1" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="15.31" y="271.1"><tspan x="15.31">G05</tspan><tspan x="15.31" dy="11">(0.54, -7.09)</tspan></text>
+<line class="leader" x1="224.65" y1="288.1" x2="281.3" y2="274.1"/>
+<circle class="goal-ring" cx="224.65" cy="288.1" r="6.3" fill="#facc15"/><circle class="goal-dot" cx="224.65" cy="288.1" r="2.2"/>
+<rect class="goal-label-bg" x="236.65" y="260.1" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="241.65" y="271.1"><tspan x="241.65">G06</tspan><tspan x="241.65" dy="11">(6.46, -7.09)</tspan></text>
+<line class="leader" x1="368.99" y1="30.28" x2="315.64" y2="58.28"/>
+<circle class="goal-ring" cx="368.99" cy="30.28" r="6.3" fill="#facc15"/><circle class="goal-dot" cx="368.99" cy="30.28" r="2.2"/>
+<rect class="goal-label-bg" x="270.99" y="44.28" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="275.99" y="55.28"><tspan x="275.99">G07</tspan><tspan x="275.99" dy="11">(13.68, 5.80)</tspan></text>
+<line class="leader" x1="488.49" y1="30.28" x2="429.14" y2="58.28"/>
+<circle class="goal-ring" cx="488.49" cy="30.28" r="6.3" fill="#facc15"/><circle class="goal-dot" cx="488.49" cy="30.28" r="2.2"/>
+<rect class="goal-label-bg" x="384.49" y="44.28" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="389.49" y="55.28"><tspan x="389.49">G08</tspan><tspan x="389.49" dy="11">(19.65, 5.80)</tspan></text>
+<line class="leader" x1="149.47" y1="159.88" x2="92.12" y2="183.88"/>
+<circle class="goal-ring" cx="149.47" cy="159.88" r="6.3" fill="#38bdf8"/><circle class="goal-dot" cx="149.47" cy="159.88" r="2.2"/>
+<rect class="goal-label-bg" x="47.47" y="169.88" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="52.47" y="180.88"><tspan x="52.47">G09</tspan><tspan x="52.47" dy="11">(2.70, -0.68)</tspan></text>
+<line class="leader" x1="237.57" y1="114.24" x2="291.17" y2="132.24"/>
+<circle class="goal-ring" cx="237.57" cy="114.24" r="6.3" fill="#38bdf8"/><circle class="goal-dot" cx="237.57" cy="114.24" r="2.2"/>
+<rect class="goal-label-bg" x="249.57" y="118.24" width="83.2" height="29" rx="4"/>
+<text class="goal-label" x="254.57" y="129.24"><tspan x="254.57">G10</tspan><tspan x="254.57" dy="11">(7.10, 1.61)</tspan></text>
+<line class="leader" x1="205.95" y1="103.92" x2="135.55" y2="107.92"/>
+<circle class="goal-ring" cx="205.95" cy="103.92" r="6.3" fill="#38bdf8"/><circle class="goal-dot" cx="205.95" cy="103.92" r="2.2"/>
+<rect class="goal-label-bg" x="93.95" y="93.92" width="83.2" height="29" rx="4"/>
+<text class="goal-label" x="98.95" y="104.92"><tspan x="98.95">G11</tspan><tspan x="98.95" dy="11">(5.52, 2.12)</tspan></text>
+<line class="leader" x1="445.49" y1="159.86" x2="505.19" y2="183.86"/>
+<circle class="goal-ring" cx="445.49" cy="159.86" r="6.3" fill="#38bdf8"/><circle class="goal-dot" cx="445.49" cy="159.86" r="2.2"/>
+<rect class="goal-label-bg" x="457.49" y="169.86" width="95.4" height="29" rx="4"/>
+<text class="goal-label" x="462.49" y="180.86"><tspan x="462.49">G12</tspan><tspan x="462.49" dy="11">(17.50, -0.67)</tspan></text>
+<line class="leader" x1="255.01" y1="90.2" x2="308.61" y2="80.2"/>
+<circle class="goal-ring" cx="255.01" cy="90.2" r="6.3" fill="#a78bfa"/><circle class="goal-dot" cx="255.01" cy="90.2" r="2.2"/>
+<rect class="goal-label-bg" x="267.01" y="66.2" width="83.2" height="29" rx="4"/>
+<text class="goal-label" x="272.01" y="77.2"><tspan x="272.01">G13</tspan><tspan x="272.01" dy="11">(7.98, 2.81)</tspan></text>
+<line class="leader" x1="93.49" y1="146.38" x2="150.14" y2="144.38"/>
+<circle class="goal-ring" cx="93.49" cy="146.38" r="6.3" fill="#94a3b8"/><circle class="goal-dot" cx="93.49" cy="146.38" r="2.2"/>
+<rect class="goal-label-bg" x="105.49" y="130.38" width="89.3" height="29" rx="4"/>
+<text class="goal-label" x="110.49" y="141.38"><tspan x="110.49">G14</tspan><tspan x="110.49" dy="11">(-0.10, 0.00)</tspan></text>
+</g>
+<g transform="translate(630.0,16)"><rect x="0" y="0" width="586" height="410" rx="8" fill="#020617" stroke="#334155"/><text class="legend-title" x="14" y="22">rmuc2026: terrain + BT goals</text><text class="legend-subtle" x="14" y="39">image=rmuc2026.png  res=0.05m/px  origin=(-4.774521, -8.73076658)</text><text class="legend-heading" x="14" y="63">BT points (map frame x,y,yaw)</text>
+<circle cx="19" cy="79" r="4" fill="#22c55e" stroke="#111827"/><text class="legend-text" x="29" y="82">G01 rmuc_supply_goal</text><text class="legend-subtle" x="29" y="95">(-1.003, -7.623, 0.0)</text>
+<circle cx="19" cy="107" r="4" fill="#f472b6" stroke="#111827"/><text class="legend-text" x="29" y="110">G02 rmuc_enemy_outpost_attack_goal</text><text class="legend-subtle" x="29" y="123">(7.976, 4.550, 0.0)</text>
+<circle cx="19" cy="135" r="4" fill="#ef4444" stroke="#111827"/><text class="legend-text" x="29" y="138">G03 rmuc_trapezoid_low_platform_goal</text><text class="legend-subtle" x="29" y="151">(4.116, 5.227, 0.0)</text>
+<circle cx="19" cy="163" r="4" fill="#facc15" stroke="#111827"/><text class="legend-text" x="29" y="166">G04 rmuc_bump_slope_start_goal</text><text class="legend-subtle" x="29" y="179">(3.980, -5.126, 0.0)</text>
+<circle cx="19" cy="191" r="4" fill="#facc15" stroke="#111827"/><text class="legend-text" x="29" y="194">G05 rmuc_bump_to_highland_before_goal</text><text class="legend-subtle" x="29" y="207">(0.541, -7.086, 0.0)</text>
+<circle cx="19" cy="219" r="4" fill="#facc15" stroke="#111827"/><text class="legend-text" x="29" y="222">G06 rmuc_bump_to_highland_after_goal</text><text class="legend-subtle" x="29" y="235">(6.458, -7.086, 0.0)</text>
+<circle cx="19" cy="247" r="4" fill="#facc15" stroke="#111827"/><text class="legend-text" x="29" y="250">G07 rmuc_enemy_bump_from_highland_before_goal</text><text class="legend-subtle" x="29" y="263">(13.675, 5.805, 0.0)</text>
+<circle cx="311" cy="79" r="4" fill="#facc15" stroke="#111827"/><text class="legend-text" x="321" y="82">G08 rmuc_enemy_bump_from_highland_after_goal</text><text class="legend-subtle" x="321" y="95">(19.650, 5.805, 0.0)</text>
+<circle cx="311" cy="107" r="4" fill="#38bdf8" stroke="#111827"/><text class="legend-text" x="321" y="110">G09 rmuc_fortress_guard_goal</text><text class="legend-subtle" x="321" y="123">(2.699, -0.675, 0.0)</text>
+<circle cx="311" cy="135" r="4" fill="#38bdf8" stroke="#111827"/><text class="legend-text" x="321" y="138">G10 rmuc_fortress_defense_on_highland_goal</text><text class="legend-subtle" x="321" y="151">(7.104, 1.607, 0.0)</text>
+<circle cx="311" cy="163" r="4" fill="#38bdf8" stroke="#111827"/><text class="legend-text" x="321" y="166">G11 rmuc_fortress_defense_under_highland_goal</text><text class="legend-subtle" x="321" y="179">(5.523, 2.123, 0.0)</text>
+<circle cx="311" cy="191" r="4" fill="#38bdf8" stroke="#111827"/><text class="legend-text" x="321" y="194">G12 rmuc_enemy_fortress_upper_goal</text><text class="legend-subtle" x="321" y="207">(17.500, -0.674, 0.0)</text>
+<circle cx="311" cy="219" r="4" fill="#a78bfa" stroke="#111827"/><text class="legend-text" x="321" y="222">G13 rmuc_assembly_guard_goal</text><text class="legend-subtle" x="321" y="235">(7.976, 2.809, 0.0)</text>
+<circle cx="311" cy="247" r="4" fill="#94a3b8" stroke="#111827"/><text class="legend-text" x="321" y="250">G14 rmuc_preparation_hold_goal</text><text class="legend-subtle" x="321" y="263">(-0.100, 0.000, 0.0)</text>
+<text class="legend-heading" x="14" y="300">Terrain zones from terrain_semantic_zones.yaml</text>
+<rect x="14" y="309" width="12" height="10" rx="2" fill="#38bdf8" fill-opacity="0.55" stroke="#075985"/><text class="legend-text" x="34" y="319">fortress_area  type=high_cost state=1 cost=175</text>
+<rect x="14" y="327" width="12" height="10" rx="2" fill="#a855f7" fill-opacity="0.55" stroke="#581c87"/><text class="legend-text" x="34" y="337">fortress_slope_intersection_lines  type=high_cost state=1 cost=235</text>
+<rect x="14" y="345" width="12" height="10" rx="2" fill="#facc15" fill-opacity="0.55" stroke="#a16207"/><text class="legend-text" x="34" y="355">ally_undulating_road_segment  type=slowdown state=2 cost=0</text>
+<rect x="14" y="363" width="12" height="10" rx="2" fill="#facc15" fill-opacity="0.55" stroke="#a16207"/><text class="legend-text" x="34" y="373">enemy_undulating_road_segment  type=slowdown state=2 cost=0</text>
+<rect x="14" y="381" width="12" height="10" rx="2" fill="#ef4444" fill-opacity="0.55" stroke="#991b1b"/><text class="legend-text" x="34" y="391">trapezoid_highland  type=high_cost state=1 cost=175</text>
+</g></svg>
