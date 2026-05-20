@@ -72,11 +72,11 @@ zones:
 
   - name: fortress_slope_intersection_lines
     enabled: true
-    type: high_cost
-    cost: 235
+    type: lethal
+    cost: 254
     state_id: 1
     priority: 80
-    line_width: 0.18
+    line_width: 0.1
     segments:
       - [[2.140, 0.29528], [2.373, -0.10872]]
       - [[3.260, 0.29528], [3.027, -0.10872]]
@@ -92,7 +92,7 @@ zones:
     state_id: 2
     priority: 70
     line_width: 2.00
-    line: [[-0.100, -7.086], [6.458, -7.086]]
+    line: [[-0.100, -7.086], [4.458, -7.086]]
 
   - name: enemy_undulating_road_segment
     enabled: true
@@ -101,7 +101,7 @@ zones:
     state_id: 2
     priority: 70
     line_width: 2.00
-    line: [[13.675, 5.805], [20.291, 5.805]]
+    line: [[15.675, 5.805], [20.291, 5.805]]
 
   - name: trapezoid_highland
     enabled: true
@@ -116,3 +116,14 @@ zones:
       - [5.87548, 5.56923]
       - [3.41390, 1.97588]
       - [-0.72610, 1.97588]
+
+  - name: trapezoid_highland_inner_corner_lethal_lines
+    enabled: true
+    type: lethal
+    cost: 254
+    state_id: 1
+    priority: 90
+    line_width: 0.10
+    segments:
+      - [[2.86390, 1.97588], [3.72479, 2.42954]]
+      - [[5.56459, 5.11557], [6.42548, 5.56923]]

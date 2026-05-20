@@ -118,7 +118,7 @@ terrain_zone_monitor:
     zones_file: $(find-pkg-share pb2025_nav_bringup)/config/reality/terrain_semantic_zones.yaml
     global_frame: map
     robot_base_frame: base_yaw_odom
-    footprint_radius: 0.42
+    footprint_radius: 0.3
     sample_count: 8
     update_frequency: 20.0
     marker_publish_frequency: 1.0

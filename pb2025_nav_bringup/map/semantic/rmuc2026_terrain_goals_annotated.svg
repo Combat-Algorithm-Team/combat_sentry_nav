@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="596" height="321" viewBox="0 0 596 321">
+<image href="rmuc2026.png" x="0" y="0" width="596" height="321"/>
+<polygon points="138.29,139.48 160.69,139.48 171.89,158.88 160.69,178.28 138.29,178.28 127.09,158.88" fill="#f59e0b" fill-opacity="0.38" stroke="#f59e0b" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="139.16,138.98 143.82,147.06 142.08,148.06 137.42,139.98" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="161.56,139.98 156.90,148.06 155.16,147.06 159.82,138.98" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="171.89,159.88 162.55,159.88 162.55,157.88 171.89,157.88" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="159.82,178.78 155.16,170.70 156.90,169.70 161.56,177.78" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="137.42,177.78 142.08,169.70 143.82,170.70 139.16,178.78" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="127.09,157.88 136.43,157.88 136.43,159.88 127.09,159.88" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="93.49,267.10 184.65,267.10 184.65,307.10 93.49,307.10" fill="#0ea5e9" fill-opacity="0.38" stroke="#0ea5e9" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="408.99,9.28 501.31,9.28 501.31,49.28 408.99,49.28" fill="#0ea5e9" fill-opacity="0.38" stroke="#0ea5e9" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="80.97,8.89 285.09,8.89 285.09,34.00 213.00,34.00 163.77,105.87 80.97,105.87" fill="#f59e0b" fill-opacity="0.38" stroke="#f59e0b" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="152.30,104.98 169.52,95.91 170.45,97.68 153.23,106.75" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<polygon points="206.32,42.19 223.53,33.12 224.47,34.88 207.25,43.96" fill="#dc2626" fill-opacity="0.52" stroke="#dc2626" stroke-opacity="0.95" stroke-width="1"/>
+<circle cx="75.43" cy="297.84" r="4.5" fill="#22c55e" stroke="#000000" stroke-width="1.4"><title>rmuc_supply_goal</title></circle>
+<circle cx="251.57" cy="53.06" r="4.5" fill="#ec4899" stroke="#000000" stroke-width="1.4"><title>rmuc_enemy_outpost_attack_goal</title></circle>
+<circle cx="177.81" cy="40.84" r="4.5" fill="#ef4444" stroke="#000000" stroke-width="1.4"><title>rmuc_trapezoid_low_platform_goal</title></circle>
+<circle cx="106.31" cy="287.10" r="4.5" fill="#facc15" stroke="#000000" stroke-width="1.4"><title>rmuc_bump_to_highland_before_goal</title></circle>
+<circle cx="224.65" cy="287.10" r="4.5" fill="#94a3b8" stroke="#000000" stroke-width="1.4"><title>rmuc_bump_to_highland_after_goal</title></circle>
+<circle cx="368.99" cy="29.28" r="4.5" fill="#2dd4bf" stroke="#000000" stroke-width="1.4"><title>rmuc_enemy_bump_from_highland_before_goal</title></circle>
+<circle cx="488.49" cy="29.28" r="4.5" fill="#0ea5e9" stroke="#000000" stroke-width="1.4"><title>rmuc_enemy_bump_from_highland_after_goal</title></circle>
+<circle cx="149.47" cy="158.88" r="4.5" fill="#a855f7" stroke="#000000" stroke-width="1.4"><title>rmuc_fortress_guard_goal</title></circle>
+<circle cx="237.57" cy="113.24" r="4.5" fill="#64748b" stroke="#000000" stroke-width="1.4"><title>rmuc_fortress_defense_on_highland_goal</title></circle>
+<circle cx="205.95" cy="102.92" r="4.5" fill="#f97316" stroke="#000000" stroke-width="1.4"><title>rmuc_fortress_defense_under_highland_goal</title></circle>
+<circle cx="445.49" cy="158.86" r="4.5" fill="#3b82f6" stroke="#000000" stroke-width="1.4"><title>rmuc_enemy_fortress_upper_goal</title></circle>
+<circle cx="255.01" cy="89.20" r="4.5" fill="#f43f5e" stroke="#000000" stroke-width="1.4"><title>rmuc_assembly_guard_goal</title></circle>
+<!-- line and segments zones above are rendered as makeLineStripPolygon rectangles, matching terrain_semantic_zones.cpp. -->
+</svg>
