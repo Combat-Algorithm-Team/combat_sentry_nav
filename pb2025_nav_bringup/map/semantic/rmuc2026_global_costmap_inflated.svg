@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="745" height="402" viewBox="0 0 745 402">
+<rect width="100%" height="100%" fill="#111827"/>
+<image href="rmuc2026_global_costmap_inflated.png" x="0" y="0" width="745" height="402"/>
+<g font-family="Menlo, Monaco, monospace" font-size="11" fill="#e5e7eb">
+<text x="8" y="16">rmuc2026 global inflated costmap</text>
+<text x="8" y="31">res=0.04 inflation=0.55 scale=5.0</text>
+<text x="8" y="46">inscribed=0.100 lethal_sources=83335</text>
+</g>
+</svg>
